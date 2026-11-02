@@ -8,9 +8,10 @@ import { LessonCard } from '@/components/schedule/lesson-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { GROUP_ID, SCHEDULE_PERIOD, SCHEDULE_TITLE } from '@/data/schedule-11701126';
+import { SCHEDULE_PERIOD } from '@/data/groups';
 import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
+import { useProfile } from '@/hooks/use-profile';
 import { homeworkKey } from '@/lib/homework';
 import {
   dateForWeekday,
@@ -31,14 +32,15 @@ import { syncScheduleWidget } from '@/widgets/sync-schedule-widget';
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const now = useNow();
+  const { group, profile } = useProfile();
   const homeworkMap = useHomeworkMap();
   const todayWeekday = getWeekday(now);
   const initialDay = todayWeekday === 7 ? 1 : todayWeekday;
   const [selectedDay, setSelectedDay] = useState<Exclude<Weekday, 7>>(initialDay);
 
   const selectedDate = dateForWeekday(now, selectedDay);
-  const lessons = getLessonsForDate(selectedDate);
-  const todayLessons = getLessonsForDate(now);
+  const lessons = getLessonsForDate(selectedDate, group.lessons, profile.subgroup);
+  const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
   const nowStatus = getNowStatus(todayLessons, now);
   const isToday = startOfDay(selectedDate).getTime() === startOfDay(now).getTime();
   const currentId = nowStatus.kind === 'now' ? nowStatus.lesson.id : undefined;
@@ -61,11 +63,12 @@ export default function ScheduleScreen() {
         ]}>
         <ThemedView style={styles.header}>
           <ThemedText type="small" themeColor="textSecondary">
-            Группа {GROUP_ID}
+            Группа {group.id}
+            {profile.subgroup ? ` · подгруппа ${profile.subgroup}` : ''}
           </ThemedText>
           <ThemedText type="subtitle">Расписание</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {SCHEDULE_TITLE} · {weekLabel}
+            {group.specialty} · {weekLabel}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {SCHEDULE_PERIOD}
@@ -96,9 +99,11 @@ export default function ScheduleScreen() {
           <ThemedView type="backgroundElement" style={styles.empty}>
             <ThemedText type="smallBold">Пар нет</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {todayWeekday === 7 && isToday
-                ? 'Воскресенье — выходной день'
-                : 'В этот день занятий нет'}
+              {group.lessons.length === 0
+                ? 'Расписание этой группы пока не добавлено'
+                : todayWeekday === 7 && isToday
+                  ? 'Воскресенье — выходной день'
+                  : 'В этот день занятий нет'}
             </ThemedText>
           </ThemedView>
         ) : (

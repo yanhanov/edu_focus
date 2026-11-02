@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { GROUP_ID, SCHEDULE_TITLE } from '@/data/schedule-11701126';
 import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { listHomeworkEntries } from '@/lib/homework';
 import {
@@ -30,12 +30,13 @@ export default function HomeScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const now = useNow();
+  const { group, profile } = useProfile();
   const homeworkMap = useHomeworkMap();
   const weekday = getWeekday(now);
   const weekLabel = weekParityLabel(getWeekParity(now));
-  const todayLessons = getLessonsForDate(now);
+  const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
   const tomorrow = addDays(now, 1);
-  const tomorrowLessons = getLessonsForDate(tomorrow);
+  const tomorrowLessons = getLessonsForDate(tomorrow, group.lessons, profile.subgroup);
   const nowStatus = getNowStatus(todayLessons, now);
   const statusCopy = describeNowStatus(nowStatus, weekday);
   const currentLesson =
@@ -64,11 +65,12 @@ export default function HomeScreen() {
         ]}>
         <ThemedView style={styles.header}>
           <ThemedText type="small" themeColor="textSecondary">
-            Группа {GROUP_ID}
+            Группа {group.id}
+            {profile.subgroup ? ` · подгруппа ${profile.subgroup}` : ''}
           </ThemedText>
           <ThemedText type="subtitle">Главная</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {SCHEDULE_TITLE} · {weekLabel}
+            {group.specialty} · {weekLabel}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {WEEKDAY_SHORT[weekday]}, {formatDate(now)}

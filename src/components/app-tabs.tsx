@@ -1,7 +1,9 @@
 import { NativeTabs } from 'expo-router/native-tabs';
-import { useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
 
+import { APP_TABS } from '@/constants/tabs';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
@@ -10,22 +12,33 @@ export default function AppTabs() {
   return (
     <NativeTabs
       backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Главная</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="schedule">
-        <NativeTabs.Trigger.Label>Расписание</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="homework">
-        <NativeTabs.Trigger.Label>ДЗ</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="pencil" md="edit_note" />
-      </NativeTabs.Trigger>
+      iconColor={{
+        default: colors.textSecondary,
+        selected: colors.accent,
+      }}
+      tintColor={colors.accent}
+      indicatorColor={colors.accentSoft}
+      rippleColor={colors.accentSoft}
+      labelVisibilityMode="unlabeled"
+      tabBarRespectsIMEInsets={Platform.OS === 'android'}>
+      {APP_TABS.map((tab) => (
+        <NativeTabs.Trigger
+          key={tab.name}
+          name={tab.name}
+          accessibilityLabel={tab.label}>
+          <NativeTabs.Trigger.Label hidden />
+          <NativeTabs.Trigger.Icon
+            sf={{
+              default: tab.icon.ios.default as never,
+              selected: tab.icon.ios.selected as never,
+            }}
+            md={{
+              default: tab.icon.android.default as never,
+              selected: tab.icon.android.selected as never,
+            }}
+          />
+        </NativeTabs.Trigger>
+      ))}
     </NativeTabs>
   );
 }

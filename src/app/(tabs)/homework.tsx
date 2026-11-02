@@ -1,37 +1,64 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
+import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { listHomeworkEntries } from '@/lib/homework';
+import { listHomeworkEntries, type HomeworkEntry } from '@/lib/homework';
 import {
+  addDays,
   formatDate,
   getLessonById,
   getLessonsForDate,
+  getWeekday,
   toIsoDate,
+  WEEKDAY_SHORT,
 } from '@/lib/schedule';
+import type { Lesson } from '@/data/schedule-11701126';
 
 function parseDate(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
+function dateHeading(iso: string, todayIso: string): string {
+  if (iso === todayIso) {
+    return 'Сегодня';
+  }
+  if (iso === toIsoDate(addDays(parseDate(todayIso), -1))) {
+    return 'Вчера';
+  }
+  const date = parseDate(iso);
+  return `${WEEKDAY_SHORT[getWeekday(date)]} · ${formatDate(date)}`;
+}
+
+function openEntry(lessonId: string, date: string) {
+  router.push({
+    pathname: '/homework-entry',
+    params: { lessonId, date },
+  });
+}
+
 export default function HomeworkListScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const now = useNow();
+  const { group, profile } = useProfile();
   const homeworkMap = useHomeworkMap();
-  const items = listHomeworkEntries(homeworkMap);
   const todayIso = toIsoDate(now);
-  const todayLessons = getLessonsForDate(now);
-  const lessonsWithoutHomework = todayLessons.filter(
-    (lesson) => !homeworkSummary(homeworkMap[`${todayIso}:${lesson.id}`]).hasContent
+  const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
+  const saved = listHomeworkEntries(homeworkMap).filter((item) =>
+    Boolean(getLessonById(item.lessonId, group.lessons))
   );
+  const earlier = saved.filter((item) => item.date !== todayIso);
+  const earlierGroups = groupByDate(earlier);
 
   return (
     <ThemedView style={styles.screen}>
@@ -45,85 +72,142 @@ export default function HomeworkListScreen() {
         ]}>
         <ThemedView style={styles.header}>
           <ThemedText type="small" themeColor="textSecondary">
-            Записи к парам
+            {formatDate(now)}
           </ThemedText>
-          <ThemedText type="subtitle">Домашние задания</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Текст, фото и ссылки хранятся на этом телефоне
-          </ThemedText>
+          <ThemedText type="subtitle">ДЗ</ThemedText>
         </ThemedView>
 
-        {lessonsWithoutHomework.length > 0 ? (
+        {todayLessons.length > 0 ? (
           <ThemedView style={styles.block}>
-            <ThemedText type="smallBold">Добавить к сегодняшней паре</ThemedText>
-            {lessonsWithoutHomework.map((lesson) => (
-              <Pressable
+            <ThemedText type="smallBold">Сегодняшние пары</ThemedText>
+            {todayLessons.map((lesson) => (
+              <HomeworkRow
                 key={lesson.id}
-                onPress={() =>
-                  router.push({
-                    pathname: '/homework-entry',
-                    params: { lessonId: lesson.id, date: todayIso },
-                  })
-                }>
-                <ThemedView type="backgroundElement" style={styles.card}>
-                  <ThemedText type="smallBold">
-                    {lesson.start} · {lesson.subject}
-                  </ThemedText>
-                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                    Записать ДЗ
-                  </ThemedText>
-                </ThemedView>
-              </Pressable>
+                lesson={lesson}
+                date={todayIso}
+                entry={homeworkMap[`${todayIso}:${lesson.id}`]}
+                emptyLabel="Добавить"
+              />
             ))}
           </ThemedView>
         ) : null}
 
-        <ThemedView style={styles.block}>
-          <ThemedText type="smallBold">Сохранённые</ThemedText>
-          {items.length === 0 ? (
-            <ThemedView type="backgroundElement" style={styles.card}>
-              <ThemedText type="smallBold">Пока пусто</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Откройте пару в расписании или выберите занятие выше
-              </ThemedText>
-            </ThemedView>
-          ) : (
-            items.map((item) => {
-              const lesson = getLessonById(item.lessonId);
-              const summary = homeworkSummary(item);
-              const details = [
-                summary.text || null,
-                summary.photoCount ? `фото: ${summary.photoCount}` : null,
-                summary.linkCount ? `ссылки: ${summary.linkCount}` : null,
-              ].filter(Boolean);
-
+        {earlierGroups.map((groupItems) => (
+          <ThemedView key={groupItems.date} style={styles.block}>
+            <ThemedText type="smallBold">{dateHeading(groupItems.date, todayIso)}</ThemedText>
+            {groupItems.items.map((item) => {
+              const lesson = getLessonById(item.lessonId, group.lessons);
+              if (!lesson) {
+                return null;
+              }
               return (
-                <Pressable
+                <HomeworkRow
                   key={`${item.date}:${item.lessonId}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/homework-entry',
-                      params: { lessonId: item.lessonId, date: item.date },
-                    })
-                  }>
-                  <ThemedView type="backgroundElement" style={styles.card}>
-                    <ThemedText type="smallBold">{lesson?.subject ?? 'Занятие'}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {formatDate(parseDate(item.date))}
-                      {lesson ? ` · ${lesson.start}` : ''}
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                      {details.join(' · ')}
-                    </ThemedText>
-                  </ThemedView>
-                </Pressable>
+                  lesson={lesson}
+                  date={item.date}
+                  entry={item}
+                />
               );
-            })
-          )}
-        </ThemedView>
+            })}
+          </ThemedView>
+        ))}
+
+        {todayLessons.length === 0 && earlier.length === 0 ? (
+          <ThemedView type="backgroundElement" style={styles.empty}>
+            <ThemedView
+              style={[styles.emptyIcon, { backgroundColor: theme.accentSoft }]}>
+              <AppIcon ios="note.text" android="edit_note" color={theme.accent} size={28} />
+            </ThemedView>
+            <ThemedText type="smallBold">Пока нет заданий</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Откройте пару в расписании или вернитесь в учебный день
+            </ThemedText>
+          </ThemedView>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );
+}
+
+function HomeworkRow({
+  lesson,
+  date,
+  entry,
+  emptyLabel,
+}: {
+  lesson: Lesson;
+  date: string;
+  entry?: HomeworkEntry;
+  emptyLabel?: string;
+}) {
+  const theme = useTheme();
+  const summary = homeworkSummary(entry);
+  const photos = entry?.photos.slice(0, 3) ?? [];
+
+  return (
+    <Pressable
+      onPress={() => openEntry(lesson.id, date)}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <ThemedView style={styles.timeCol}>
+          <ThemedText type="smallBold">{lesson.start}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {lesson.end}
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.body}>
+          <ThemedText type="smallBold">{lesson.subject}</ThemedText>
+          {summary.hasContent ? (
+            <>
+              {summary.text ? (
+                <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                  {summary.text}
+                </ThemedText>
+              ) : null}
+              {photos.length > 0 ? (
+                <ThemedView style={styles.thumbs}>
+                  {photos.map((photo) => (
+                    <Image key={photo.id} source={{ uri: photo.uri }} style={styles.thumb} />
+                  ))}
+                  {summary.photoCount > photos.length ? (
+                    <ThemedView type="backgroundSelected" style={styles.moreThumb}>
+                      <ThemedText type="smallBold">+{summary.photoCount - photos.length}</ThemedText>
+                    </ThemedView>
+                  ) : null}
+                </ThemedView>
+              ) : null}
+              {summary.linkCount > 0 ? (
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  {summary.linkCount === 1 ? '1 ссылка' : `ссылок: ${summary.linkCount}`}
+                </ThemedText>
+              ) : null}
+            </>
+          ) : (
+            <ThemedView style={styles.addRow}>
+              <AppIcon ios="plus" android="add" color={theme.accent} size={16} />
+              <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                {emptyLabel ?? 'Открыть'}
+              </ThemedText>
+            </ThemedView>
+          )}
+        </ThemedView>
+      </ThemedView>
+    </Pressable>
+  );
+}
+
+function groupByDate(items: HomeworkEntry[]): { date: string; items: HomeworkEntry[] }[] {
+  const groups: { date: string; items: HomeworkEntry[] }[] = [];
+  items.forEach((item) => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === item.date) {
+      last.items.push(item);
+      return;
+    }
+    groups.push({ date: item.date, items: [item] });
+  });
+  return groups;
 }
 
 const styles = StyleSheet.create({
@@ -144,8 +228,58 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   card: {
+    flexDirection: 'row',
+    gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Spacing.three,
+  },
+  timeCol: {
+    minWidth: 52,
+    gap: 2,
+    backgroundColor: 'transparent',
+  },
+  body: {
+    flex: 1,
     gap: Spacing.one,
+    backgroundColor: 'transparent',
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    backgroundColor: 'transparent',
+  },
+  thumbs: {
+    flexDirection: 'row',
+    gap: Spacing.one,
+    backgroundColor: 'transparent',
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: Spacing.two,
+  },
+  moreThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  empty: {
+    padding: Spacing.four,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

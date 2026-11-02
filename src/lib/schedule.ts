@@ -1,11 +1,11 @@
+import { GROUPS, getGroup } from '@/data/groups';
 import {
-  GROUP_ID,
-  LESSONS,
   WEEK_I_MONDAY,
   type Lesson,
   type WeekParity,
   type Weekday,
 } from '@/data/schedule-11701126';
+import { getCachedProfile, type SubgroupPreference } from '@/lib/profile';
 
 export type { Lesson, WeekParity, Weekday };
 
@@ -125,8 +125,27 @@ export function isLessonOnDate(lesson: Lesson, date: Date): boolean {
   return true;
 }
 
-export function getLessonById(id: string): Lesson | undefined {
-  return LESSONS.find((lesson) => lesson.id === id);
+export function matchesSubgroup(lesson: Lesson, subgroup: SubgroupPreference): boolean {
+  if (subgroup == null) {
+    return true;
+  }
+  if (lesson.subgroup == null) {
+    return true;
+  }
+  return lesson.subgroup === subgroup;
+}
+
+export function getLessonById(id: string, lessons?: readonly Lesson[]): Lesson | undefined {
+  if (lessons) {
+    return lessons.find((lesson) => lesson.id === id);
+  }
+  for (const group of GROUPS) {
+    const found = group.lessons.find((lesson) => lesson.id === id);
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
 }
 
 export function dateForWeekday(today: Date, weekday: Exclude<Weekday, 7>): Date {
@@ -171,14 +190,23 @@ export function describeNowStatus(
   };
 }
 
-export function getLessonsForDate(date: Date): Lesson[] {
-  return LESSONS.filter((lesson) => isLessonOnDate(lesson, date)).sort((a, b) => {
-    const timeDiff = minutesFromMidnight(a.start) - minutesFromMidnight(b.start);
-    if (timeDiff !== 0) {
-      return timeDiff;
-    }
-    return (a.subgroup ?? 0) - (b.subgroup ?? 0);
-  });
+export function getLessonsForDate(
+  date: Date,
+  lessons?: readonly Lesson[],
+  subgroup?: SubgroupPreference
+): Lesson[] {
+  const profile = getCachedProfile();
+  const source = lessons ?? getGroup(profile.groupId).lessons;
+  const selectedSubgroup = subgroup === undefined ? profile.subgroup : subgroup;
+  return source
+    .filter((lesson) => isLessonOnDate(lesson, date) && matchesSubgroup(lesson, selectedSubgroup))
+    .sort((a, b) => {
+      const timeDiff = minutesFromMidnight(a.start) - minutesFromMidnight(b.start);
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      return (a.subgroup ?? 0) - (b.subgroup ?? 0);
+    });
 }
 
 export function getNowStatus(lessons: Lesson[], now: Date): NowStatus {
@@ -234,12 +262,15 @@ export function toWidgetLesson(lesson: Lesson): WidgetLesson {
 }
 
 export function buildWidgetProps(now = new Date()): ScheduleWidgetProps {
+  const profile = getCachedProfile();
+  const group = getGroup(profile.groupId);
   const tomorrow = addDays(now, 1);
-  const todayLessons = getLessonsForDate(now);
-  const tomorrowLessons = getLessonsForDate(tomorrow);
+  const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
+  const tomorrowLessons = getLessonsForDate(tomorrow, group.lessons, profile.subgroup);
+  const subgroupLabel = profile.subgroup ? ` · пг ${profile.subgroup}` : '';
 
   return {
-    weekLabel: `${GROUP_ID} · ${weekParityLabel(getWeekParity(now))}`,
+    weekLabel: `${group.id}${subgroupLabel} · ${weekParityLabel(getWeekParity(now))}`,
     todayLabel: `${WEEKDAY_SHORT[getWeekday(now)]}, ${formatDate(now)}`,
     tomorrowLabel: `Завтра · ${WEEKDAY_SHORT[getWeekday(tomorrow)]}`,
     today: todayLessons.map(toWidgetLesson),

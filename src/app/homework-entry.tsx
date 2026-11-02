@@ -2,9 +2,10 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -31,12 +33,19 @@ import {
   formatDate,
   getLessonById,
   LESSON_TYPE_LABELS,
-  WEEKDAY_LABELS,
 } from '@/lib/schedule';
 
 function parseDate(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(year, month - 1, day);
+}
+
+function linkHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 export default function HomeworkEntryScreen() {
@@ -45,7 +54,7 @@ export default function HomeworkEntryScreen() {
   const params = useLocalSearchParams<{ lessonId?: string; date?: string }>();
   const lessonId = typeof params.lessonId === 'string' ? params.lessonId : '';
   const date = typeof params.date === 'string' ? params.date : '';
-  const lesson = useMemo(() => getLessonById(lessonId), [lessonId]);
+  const lesson = getLessonById(lessonId);
 
   const [entry, setEntry] = useState<HomeworkEntry>({
     lessonId,
@@ -56,7 +65,9 @@ export default function HomeworkEntryScreen() {
     updatedAt: 0,
   });
   const [linkDraft, setLinkDraft] = useState('');
+  const [linkOpen, setLinkOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [saveLabel, setSaveLabel] = useState('Черновик');
   const entryRef = useRef(entry);
 
   useEffect(() => {
@@ -69,6 +80,7 @@ export default function HomeworkEntryScreen() {
       if (!cancelled) {
         setEntry(next);
         setLoaded(true);
+        setSaveLabel('Сохранено');
       }
     });
     return () => {
@@ -81,7 +93,7 @@ export default function HomeworkEntryScreen() {
       return;
     }
     const handle = setTimeout(() => {
-      void saveHomework(entry);
+      void saveHomework(entry).then(() => setSaveLabel('Сохранено'));
     }, 400);
     return () => clearTimeout(handle);
   }, [entry, loaded]);
@@ -95,6 +107,7 @@ export default function HomeworkEntryScreen() {
   const persist = useCallback(async (next: HomeworkEntry) => {
     setEntry(next);
     await saveHomework(next);
+    setSaveLabel('Сохранено');
   }, []);
 
   const addPhotos = useCallback(
@@ -156,6 +169,7 @@ export default function HomeworkEntryScreen() {
       return;
     }
     setLinkDraft('');
+    setLinkOpen(false);
     await persist({
       ...entry,
       links: [...entry.links, { id: createItemId(), url }],
@@ -178,6 +192,12 @@ export default function HomeworkEntryScreen() {
     });
   }, []);
 
+  const closeLinkComposer = useCallback(() => {
+    setLinkOpen(false);
+    setLinkDraft('');
+    Keyboard.dismiss();
+  }, []);
+
   if (!lesson || !date) {
     return (
       <ThemedView style={[styles.screen, { paddingTop: insets.top + Spacing.three }]}>
@@ -187,144 +207,215 @@ export default function HomeworkEntryScreen() {
   }
 
   const lessonDate = parseDate(date);
+  const typeLabel = lesson.type === 'pe' ? 'Физкультура' : LESSON_TYPE_LABELS[lesson.type];
 
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ThemedView style={styles.screen}>
+        <ThemedView
+          style={[
+            styles.topBar,
+            {
+              paddingTop: insets.top + Spacing.two,
+              borderBottomColor: theme.backgroundElement,
+            },
+          ]}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            style={({ pressed }) => [styles.topButton, pressed && styles.pressed]}>
+            <AppIcon ios="chevron.left" android="arrow_back" color={theme.text} size={22} />
+          </Pressable>
+          <ThemedView style={styles.topCenter}>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {lesson.subject}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {formatDate(lessonDate)} · {lesson.start}–{lesson.end} · {typeLabel}
+            </ThemedText>
+          </ThemedView>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.doneButton, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              Готово
+            </ThemedText>
+          </Pressable>
+        </ThemedView>
+
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
-            {
-              paddingTop: insets.top + Spacing.three,
-              paddingBottom: insets.bottom + Spacing.five,
-            },
+            { paddingBottom: insets.bottom + Spacing.five },
           ]}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => pressed && styles.pressed}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Назад
-            </ThemedText>
-          </Pressable>
-
-          <ThemedView style={styles.header}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Домашнее задание
-            </ThemedText>
-            <ThemedText type="subtitle" style={styles.subject}>
-              {lesson.subject}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {WEEKDAY_LABELS[lesson.weekday]}, {formatDate(lessonDate)} · {lesson.start}–{lesson.end}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {lesson.type === 'pe' ? lesson.teacher : `${LESSON_TYPE_LABELS[lesson.type]} · ${lesson.teacher}`}
-            </ThemedText>
-          </ThemedView>
-
-          <ThemedView style={styles.block}>
-            <ThemedText type="smallBold">Текст</ThemedText>
+          <ThemedView type="backgroundElement" style={styles.composer}>
             <TextInput
               value={entry.text}
               editable={loaded}
               multiline
               textAlignVertical="top"
-              placeholder="Что задали: номера задач, страницы, дедлайн..."
+              placeholder="Что задали: номера, страницы, дедлайн…"
               placeholderTextColor={theme.textSecondary}
-              onChangeText={(text) => setEntry({ ...entry, text })}
+              onChangeText={(text) => {
+                setSaveLabel('Сохранение…');
+                setEntry({ ...entry, text });
+              }}
               onBlur={() => {
                 void persist(entry);
               }}
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  backgroundColor: theme.backgroundElement,
-                },
-              ]}
+              style={[styles.input, { color: theme.text }]}
             />
-          </ThemedView>
 
-          <ThemedView style={styles.block}>
-            <ThemedText type="smallBold">Фото</ThemedText>
-            <ThemedView style={styles.photoRow}>
-              {entry.photos.map((photo) => (
-                <ThemedView key={photo.id} style={styles.photoWrap}>
-                  <Image source={{ uri: photo.uri }} style={styles.photo} contentFit="cover" />
-                  <Pressable
-                    onPress={() => {
-                      void removePhoto(photo.id);
-                    }}
-                    style={[styles.photoRemove, { backgroundColor: theme.background }]}>
-                    <ThemedText type="smallBold">×</ThemedText>
-                  </Pressable>
-                </ThemedView>
-              ))}
-            </ThemedView>
-            <ThemedView style={styles.actions}>
-              <ActionButton label="Галерея" onPress={() => void pickFromLibrary()} />
-              <ActionButton label="Камера" onPress={() => void takePhoto()} />
-            </ThemedView>
-          </ThemedView>
+            {entry.photos.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.photoRow}>
+                {entry.photos.map((photo) => (
+                  <ThemedView key={photo.id} style={styles.photoWrap}>
+                    <Image source={{ uri: photo.uri }} style={styles.photo} contentFit="cover" />
+                    <Pressable
+                      onPress={() => {
+                        void removePhoto(photo.id);
+                      }}
+                      style={[styles.photoRemove, { backgroundColor: theme.background }]}>
+                      <AppIcon ios="xmark" android="close" color={theme.text} size={12} />
+                    </Pressable>
+                  </ThemedView>
+                ))}
+              </ScrollView>
+            ) : null}
 
-          <ThemedView style={styles.block}>
-            <ThemedText type="smallBold">Ссылки</ThemedText>
             {entry.links.map((link) => (
-              <ThemedView key={link.id} type="backgroundElement" style={styles.linkRow}>
+              <ThemedView key={link.id} type="backgroundSelected" style={styles.linkRow}>
                 <Pressable
                   onPress={() => void openLink(link.url)}
-                  style={({ pressed }) => [styles.linkText, pressed && styles.pressed]}>
-                  <ThemedText type="linkPrimary" numberOfLines={2}>
-                    {link.url}
-                  </ThemedText>
+                  style={({ pressed }) => [styles.linkBody, pressed && styles.pressed]}>
+                  <AppIcon ios="link" android="link" color={theme.accent} size={16} />
+                  <ThemedView style={styles.linkCopy}>
+                    <ThemedText type="smallBold" numberOfLines={1}>
+                      {linkHost(link.url)}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      {link.url}
+                    </ThemedText>
+                  </ThemedView>
                 </Pressable>
                 <Pressable
                   onPress={() => {
                     void removeLink(link.id);
-                  }}>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Удалить
-                  </ThemedText>
+                  }}
+                  hitSlop={8}>
+                  <AppIcon ios="xmark" android="close" color={theme.textSecondary} size={14} />
                 </Pressable>
               </ThemedView>
             ))}
-            <TextInput
-              value={linkDraft}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder="https://..."
-              placeholderTextColor={theme.textSecondary}
-              onChangeText={setLinkDraft}
-              onSubmitEditing={() => {
-                void addLink();
-              }}
-              style={[
-                styles.linkInput,
-                {
-                  color: theme.text,
-                  backgroundColor: theme.backgroundElement,
-                },
-              ]}
-            />
-            <ActionButton label="Добавить ссылку" onPress={() => void addLink()} />
           </ThemedView>
+
+          <ThemedText type="small" themeColor="textSecondary" style={styles.saveHint}>
+            {saveLabel}
+          </ThemedText>
         </ScrollView>
+
+        <ThemedView
+          style={[
+            styles.toolbar,
+            {
+              paddingBottom: insets.bottom + Spacing.two,
+              borderTopColor: theme.backgroundElement,
+            },
+          ]}>
+          {linkOpen ? (
+            <ThemedView style={styles.linkComposer}>
+              <TextInput
+                value={linkDraft}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="Вставьте ссылку"
+                placeholderTextColor={theme.textSecondary}
+                onChangeText={setLinkDraft}
+                onSubmitEditing={() => {
+                  void addLink();
+                }}
+                style={[
+                  styles.linkInput,
+                  {
+                    color: theme.text,
+                    backgroundColor: theme.backgroundElement,
+                  },
+                ]}
+              />
+              <Pressable
+                onPress={() => void addLink()}
+                style={({ pressed }) => [
+                  styles.linkAdd,
+                  { backgroundColor: theme.accent },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText type="smallBold" style={{ color: theme.background }}>
+                  Ок
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={closeLinkComposer}
+                hitSlop={8}
+                style={({ pressed }) => [styles.linkCancel, pressed && styles.pressed]}>
+                <AppIcon ios="xmark" android="close" color={theme.textSecondary} size={20} />
+              </Pressable>
+            </ThemedView>
+          ) : (
+            <ThemedView style={styles.tools}>
+              <ToolButton
+                ios="camera.fill"
+                android="photo_camera"
+                label="Камера"
+                onPress={() => void takePhoto()}
+              />
+              <ToolButton
+                ios="photo.on.rectangle"
+                android="photo_library"
+                label="Фото"
+                onPress={() => void pickFromLibrary()}
+              />
+              <ToolButton
+                ios="link"
+                android="link"
+                label="Ссылка"
+                onPress={() => setLinkOpen(true)}
+              />
+            </ThemedView>
+          )}
+        </ThemedView>
       </ThemedView>
     </KeyboardAvoidingView>
   );
 }
 
-function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+function ToolButton({
+  ios,
+  android,
+  label,
+  onPress,
+}: {
+  ios: string;
+  android: string;
+  label: string;
+  onPress: () => void;
+}) {
   const theme = useTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundSelected" style={[styles.action, { backgroundColor: theme.accentSoft }]}>
-        <ThemedText type="smallBold" style={{ color: theme.accent }}>
-          {label}
-        </ThemedText>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.tool, pressed && styles.pressed]}>
+      <ThemedView style={[styles.toolIcon, { backgroundColor: theme.accentSoft }]}>
+        <AppIcon ios={ios} android={android} color={theme.accent} size={20} />
       </ThemedView>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -336,71 +427,75 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  content: {
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
   padded: {
     paddingHorizontal: Spacing.four,
   },
   pressed: {
     opacity: 0.7,
   },
-  header: {
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.two,
+    paddingBottom: Spacing.two,
     gap: Spacing.one,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  subject: {
-    fontSize: 28,
-    lineHeight: 34,
+  topButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  block: {
+  topCenter: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  doneButton: {
+    paddingHorizontal: Spacing.two,
+    height: 44,
+    justifyContent: 'center',
+  },
+  content: {
+    maxWidth: MaxContentWidth,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
     gap: Spacing.two,
   },
-  input: {
-    minHeight: 120,
+  composer: {
     borderRadius: Spacing.three,
     padding: Spacing.three,
-    fontSize: 16,
-    lineHeight: 22,
+    gap: Spacing.three,
+  },
+  input: {
+    minHeight: 180,
+    fontSize: 17,
+    lineHeight: 24,
+    padding: 0,
   },
   photoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.two,
-    backgroundColor: 'transparent',
   },
   photoWrap: {
     position: 'relative',
     backgroundColor: 'transparent',
   },
   photo: {
-    width: 92,
-    height: 92,
+    width: 120,
+    height: 120,
     borderRadius: Spacing.two,
   },
   photoRemove: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 6,
+    right: 6,
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    backgroundColor: 'transparent',
-  },
-  action: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
   },
   linkRow: {
     flexDirection: 'row',
@@ -409,13 +504,65 @@ const styles = StyleSheet.create({
     padding: Spacing.two,
     borderRadius: Spacing.two,
   },
-  linkText: {
+  linkBody: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  linkCopy: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  saveHint: {
+    paddingHorizontal: Spacing.one,
+  },
+  toolbar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  tools: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'transparent',
+  },
+  tool: {
+    alignItems: 'center',
+    gap: Spacing.one,
+    minWidth: 88,
+  },
+  toolIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkComposer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: 'transparent',
+  },
+  linkCancel: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   linkInput: {
-    borderRadius: Spacing.three,
+    flex: 1,
+    borderRadius: Spacing.five,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
+  },
+  linkAdd: {
+    height: 40,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.five,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
