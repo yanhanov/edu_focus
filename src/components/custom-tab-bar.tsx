@@ -1,15 +1,13 @@
-import type { BottomTabBarProps } from 'expo-router';
+import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs/types';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { APP_TABS } from '@/constants/tabs';
 import { useTheme } from '@/hooks/use-theme';
 
-export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+export function CustomTabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -28,29 +26,14 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           return null;
         }
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
-          }
-        };
-
-        const onLongPress = () => {
-          navigation.emit({
-            type: 'tabLongPress',
-            target: route.key,
-          });
-        };
-
         return (
           <Pressable
             key={route.key}
-            onPress={onPress}
-            onLongPress={onLongPress}
+            onPress={() => {
+              if (!focused) {
+                navigateToTab(route.key);
+              }
+            }}
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}
             accessibilityLabel={tab.label}
