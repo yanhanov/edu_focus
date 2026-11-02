@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getGroup, type Group, type GroupId } from '@/data/groups';
 import { syncHomeworkRemindersRuntime } from '@/lib/notifications-runtime';
@@ -11,6 +11,7 @@ import {
   type SubgroupPreference,
   type ThemePreference,
 } from '@/lib/profile';
+import { loadAllScheduleOverrides, subscribeSchedule } from '@/lib/schedule-overrides';
 import { syncScheduleWidget } from '@/widgets/sync-schedule-widget';
 
 type ProfileContextValue = {
@@ -33,17 +34,22 @@ export function useProfileOptional(): ProfileContextValue | null {
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [ready, setReady] = useState(false);
+  const [scheduleTick, setScheduleTick] = useState(0);
+
+  useEffect(() => subscribeSchedule(() => setScheduleTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
-    void loadProfile().then((next) => {
-      if (!cancelled) {
-        setProfile(next);
-        setReady(true);
-        syncScheduleWidget();
-        void syncHomeworkRemindersRuntime(next);
-      }
-    });
+    void loadAllScheduleOverrides().then(() =>
+      loadProfile().then((next) => {
+        if (!cancelled) {
+          setProfile(next);
+          setReady(true);
+          syncScheduleWidget();
+          void syncHomeworkRemindersRuntime(next);
+        }
+      })
+    );
     return () => {
       cancelled = true;
     };
@@ -61,11 +67,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     persist({ ...profile, ...partial });
   };
 
+  const group = useMemo(() => {
+    void scheduleTick;
+    return getGroup(profile.groupId);
+  }, [profile.groupId, scheduleTick]);
+
   return (
     <ProfileContext.Provider
       value={{
         profile,
-        group: getGroup(profile.groupId),
+        group,
         ready,
         setGroupId: (groupId) => update({ groupId }),
         setSubgroup: (subgroup) => update({ subgroup }),

@@ -6,6 +6,7 @@ import {
   type Weekday,
 } from '@/data/schedule-11701126';
 import { getCachedProfile, type SubgroupPreference } from '@/lib/profile';
+import { getEffectiveSchedule } from '@/lib/schedule-overrides';
 
 export type { Lesson, WeekParity, Weekday };
 
@@ -90,8 +91,13 @@ export function formatDate(date: Date): string {
   });
 }
 
+function getWeekIAnchorIso(): string {
+  const profile = getCachedProfile();
+  return getEffectiveSchedule(profile.groupId).weekIMonday || WEEK_I_MONDAY;
+}
+
 export function getWeekParity(date: Date): WeekParity {
-  const [year, month, day] = WEEK_I_MONDAY.split('-').map(Number);
+  const [year, month, day] = getWeekIAnchorIso().split('-').map(Number);
   const anchor = startOfDay(new Date(year, month - 1, day));
   const monday = startOfWeekMonday(date);
   const diffDays = Math.round((monday.getTime() - anchor.getTime()) / 86_400_000);
