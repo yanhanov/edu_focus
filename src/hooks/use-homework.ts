@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import {
+  homeworkCompletionStatus,
   loadHomeworkMap,
   subscribeHomework,
   type HomeworkEntry,
@@ -36,13 +37,23 @@ export function useHomeworkMap(): HomeworkMap {
 
 export function homeworkSummary(entry: HomeworkEntry | undefined) {
   if (!entry) {
-    return { text: '', photoCount: 0, linkCount: 0, hasContent: false };
+    return {
+      text: '',
+      photoCount: 0,
+      linkCount: 0,
+      hasContent: false,
+      status: 'none' as const,
+      done: false,
+    };
   }
   const text = entry.text.trim();
+  const status = homeworkCompletionStatus(entry);
   return {
     text,
     photoCount: entry.photos.length,
     linkCount: entry.links.length,
-    hasContent: text.length > 0 || entry.photos.length > 0 || entry.links.length > 0,
+    hasContent: status !== 'none',
+    status,
+    done: status === 'done',
   };
 }

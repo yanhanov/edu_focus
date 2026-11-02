@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import type { AccentPaletteId } from '@/constants/accent-palettes';
 import { getGroup, type Group, type GroupId } from '@/data/groups';
 import { syncHomeworkRemindersRuntime } from '@/lib/notifications-runtime';
 import {
@@ -21,6 +22,7 @@ type ProfileContextValue = {
   setGroupId: (groupId: GroupId) => void;
   setSubgroup: (subgroup: SubgroupPreference) => void;
   setTheme: (theme: ThemePreference) => void;
+  setAccentPalette: (accentPalette: AccentPaletteId) => void;
   setNotifications: (notifications: NotificationSettings) => void;
   completeOnboarding: (next: Profile) => Promise<void>;
 };
@@ -81,6 +83,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         setGroupId: (groupId) => update({ groupId }),
         setSubgroup: (subgroup) => update({ subgroup }),
         setTheme: (theme) => update({ theme }),
+        setAccentPalette: (accentPalette) => update({ accentPalette }),
         setNotifications: (notifications) => update({ notifications }),
         completeOnboarding: async (next) => {
           const completed = { ...next, onboardingComplete: true };

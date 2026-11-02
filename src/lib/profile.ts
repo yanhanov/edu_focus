@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance, Platform } from 'react-native';
 
+import {
+  DEFAULT_ACCENT_PALETTE,
+  isAccentPaletteId,
+  type AccentPaletteId,
+} from '@/constants/accent-palettes';
 import { DEFAULT_GROUP_ID, isGroupId, type GroupId } from '@/data/groups';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
@@ -16,6 +21,7 @@ export type Profile = {
   groupId: GroupId;
   subgroup: SubgroupPreference;
   theme: ThemePreference;
+  accentPalette: AccentPaletteId;
   onboardingComplete: boolean;
   notifications: NotificationSettings;
 };
@@ -30,6 +36,7 @@ export const DEFAULT_PROFILE: Profile = {
   groupId: DEFAULT_GROUP_ID,
   subgroup: null,
   theme: 'system',
+  accentPalette: DEFAULT_ACCENT_PALETTE,
   onboardingComplete: false,
   notifications: DEFAULT_NOTIFICATIONS,
 };
@@ -89,6 +96,10 @@ function parseProfile(value: unknown, hasStoredProfile: boolean): Profile {
     groupId: typeof raw.groupId === 'string' && isGroupId(raw.groupId) ? raw.groupId : DEFAULT_PROFILE.groupId,
     subgroup: raw.subgroup === 1 || raw.subgroup === 2 ? raw.subgroup : null,
     theme: raw.theme === 'light' || raw.theme === 'dark' || raw.theme === 'system' ? raw.theme : 'system',
+    accentPalette:
+      typeof raw.accentPalette === 'string' && isAccentPaletteId(raw.accentPalette)
+        ? raw.accentPalette
+        : DEFAULT_ACCENT_PALETTE,
     onboardingComplete:
       typeof raw.onboardingComplete === 'boolean' ? raw.onboardingComplete : hasStoredProfile,
     notifications: parseNotifications(raw.notifications),

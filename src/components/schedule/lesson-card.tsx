@@ -33,16 +33,27 @@ export function LessonCard({ lesson, isCurrent = false, homework, onPress }: Les
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
         type={isCurrent ? 'backgroundSelected' : 'backgroundElement'}
-        style={[styles.card, isCurrent && { backgroundColor: theme.accentSoft }]}>
+        style={[
+          styles.card,
+          isCurrent && {
+            backgroundColor: theme.accentSoft,
+            borderColor: theme.accent,
+            borderWidth: 2,
+          },
+        ]}>
         <ThemedView style={[styles.timeCol, { backgroundColor: 'transparent' }]}>
-          <ThemedText type="smallBold">{lesson.start}</ThemedText>
+          <ThemedText type="smallBold" style={isCurrent ? { color: theme.accent } : undefined}>
+            {lesson.start}
+          </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {lesson.end}
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={[styles.body, { backgroundColor: 'transparent' }]}>
-          <ThemedText type="smallBold">{lesson.subject}</ThemedText>
+          <ThemedText type="smallBold" style={isCurrent ? { color: theme.accent } : undefined}>
+            {lesson.subject}
+          </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {lesson.type === 'pe' ? lesson.teacher : `${LESSON_TYPE_LABELS[lesson.type]} · ${lesson.teacher}`}
           </ThemedText>
@@ -50,12 +61,7 @@ export function LessonCard({ lesson, isCurrent = false, homework, onPress }: Les
             {formatPlace(lesson)}
             {lesson.subgroup ? ` · подгруппа ${lesson.subgroup}` : ''}
           </ThemedText>
-          {isCurrent ? (
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Сейчас
-            </ThemedText>
-          ) : null}
-          {homework?.hasContent ? (
+          {homework?.hasContent && details.length > 0 ? (
             <ThemedText type="small" style={{ color: theme.accent }} numberOfLines={2}>
               ДЗ · {details.join(' · ')}
             </ThemedText>

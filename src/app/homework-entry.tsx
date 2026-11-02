@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HomeworkStatusChip } from '@/components/homework/homework-status-chip';
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -62,6 +63,7 @@ export default function HomeworkEntryScreen() {
     text: '',
     photos: [],
     links: [],
+    done: false,
     updatedAt: 0,
   });
   const [linkDraft, setLinkDraft] = useState('');
@@ -251,6 +253,19 @@ export default function HomeworkEntryScreen() {
             styles.content,
             { paddingBottom: insets.bottom + Spacing.five },
           ]}>
+          <ThemedView style={styles.statusRow}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Статус
+            </ThemedText>
+            <HomeworkStatusChip
+              status={entry.done ? 'done' : 'todo'}
+              onToggle={() => {
+                setSaveLabel('Сохранение…');
+                setEntry({ ...entry, done: !entry.done });
+              }}
+            />
+          </ThemedView>
+
           <ThemedView type="backgroundElement" style={styles.composer}>
             <TextInput
               value={entry.text}
@@ -463,6 +478,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     gap: Spacing.two,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
   },
   composer: {
     borderRadius: Spacing.three,

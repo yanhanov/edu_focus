@@ -11,7 +11,13 @@ import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { listHomeworkEntries, type HomeworkEntry } from '@/lib/homework';
+import { HomeworkStatusChip } from '@/components/homework/homework-status-chip';
+import {
+  homeworkCompletionStatus,
+  listHomeworkEntries,
+  setHomeworkDone,
+  type HomeworkEntry,
+} from '@/lib/homework';
 import {
   addDays,
   formatDate,
@@ -87,6 +93,7 @@ export default function HomeworkListScreen() {
                 date={todayIso}
                 entry={homeworkMap[`${todayIso}:${lesson.id}`]}
                 emptyLabel="Добавить"
+                alwaysShowStatus
               />
             ))}
           </ThemedView>
@@ -134,15 +141,18 @@ function HomeworkRow({
   date,
   entry,
   emptyLabel,
+  alwaysShowStatus = false,
 }: {
   lesson: Lesson;
   date: string;
   entry?: HomeworkEntry;
   emptyLabel?: string;
+  alwaysShowStatus?: boolean;
 }) {
   const theme = useTheme();
   const summary = homeworkSummary(entry);
   const photos = entry?.photos.slice(0, 3) ?? [];
+  const completion = homeworkCompletionStatus(entry);
 
   return (
     <Pressable
@@ -157,7 +167,20 @@ function HomeworkRow({
         </ThemedView>
 
         <ThemedView style={styles.body}>
-          <ThemedText type="smallBold">{lesson.subject}</ThemedText>
+          <ThemedView style={styles.subjectRow}>
+            <ThemedText type="smallBold" style={styles.subjectTitle}>
+              {lesson.subject}
+            </ThemedText>
+            {alwaysShowStatus || completion !== 'none' ? (
+              <HomeworkStatusChip
+                status={completion === 'done' ? 'done' : 'todo'}
+                compact
+                onToggle={() => {
+                  void setHomeworkDone(date, lesson.id, completion !== 'done');
+                }}
+              />
+            ) : null}
+          </ThemedView>
           {summary.hasContent ? (
             <>
               {summary.text ? (
@@ -242,6 +265,16 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.one,
     backgroundColor: 'transparent',
+  },
+  subjectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    backgroundColor: 'transparent',
+  },
+  subjectTitle: {
+    flex: 1,
   },
   addRow: {
     flexDirection: 'row',

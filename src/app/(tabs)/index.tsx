@@ -8,11 +8,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import type { Lesson } from '@/data/schedule-11701126';
+import { HomeworkStatusChip } from '@/components/homework/homework-status-chip';
 import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
-import { isHomeworkEmpty, listHomeworkEntries } from '@/lib/homework';
+import {
+  homeworkCompletionStatus,
+  homeworkKey,
+  setHomeworkDone,
+  type HomeworkMap,
+} from '@/lib/homework';
 import {
   addDays,
   currentMinutes,
@@ -51,9 +57,11 @@ export default function HomeScreen() {
         ? nowStatus.next
         : undefined;
   const todayIso = toIsoDate(now);
-  const homeworkItems = listHomeworkEntries(homeworkMap);
-  const todayHomework = homeworkItems.filter((item) => item.date === todayIso);
   const nowMinutes = currentMinutes(now);
+  const pendingHomeworkCount = todayLessons.filter((lesson) => {
+    const status = homeworkCompletionStatus(homeworkMap[homeworkKey(todayIso, lesson.id)]);
+    return status === 'todo';
+  }).length;
   const doneToday = todayLessons.filter((lesson) => minutesFromMidnight(lesson.end) <= nowMinutes).length;
 
   useEffect(() => {
@@ -133,27 +141,15 @@ export default function HomeScreen() {
           </ThemedView>
         </Pressable>
 
-        <ThemedView style={styles.quickRow}>
-          <QuickAction
-            label="Расписание"
-            iosIcon="calendar"
-            androidIcon="calendar_month"
-            onPress={() => router.navigate('/schedule')}
-          />
-          <QuickAction
-            label="ДЗ"
-            iosIcon="note.text"
-            androidIcon="edit_note"
-            badge={homeworkItems.length > 0 ? String(homeworkItems.length) : undefined}
-            onPress={() => router.navigate('/homework')}
-          />
-        </ThemedView>
-
         <ThemedView style={styles.section}>
           <SectionHeader
             title="Сегодня"
-            subtitle={`${todayLessons.length} ${pairsLabel(todayLessons.length)}`}
-            action="Все"
+            subtitle={
+              pendingHomeworkCount > 0
+                ? `${todayLessons.length} ${pairsLabel(todayLessons.length)} · ДЗ не сделано: ${pendingHomeworkCount}`
+                : `${todayLessons.length} ${pairsLabel(todayLessons.length)}`
+            }
+            action="Расписание"
             onAction={() => router.navigate('/schedule')}
           />
           {todayLessons.length === 0 ? (
@@ -163,14 +159,15 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
           ) : (
-            todayLessons.map((lesson) => (
+            todayLessons.map((lesson, index) => (
               <LessonTimelineRow
                 key={lesson.id}
                 lesson={lesson}
                 date={todayIso}
                 status={nowStatus}
                 nowMinutes={nowMinutes}
-                hasHomework={!isHomeworkEmpty(homeworkMap[`${todayIso}:${lesson.id}`])}
+                prevLesson={index > 0 ? todayLessons[index - 1] : undefined}
+                homeworkMap={homeworkMap}
               />
             ))
           )}
@@ -208,63 +205,6 @@ export default function HomeScreen() {
           )}
         </ThemedView>
 
-        <ThemedView style={styles.section}>
-          <SectionHeader
-            title="Домашние задания"
-            subtitle={todayHomework.length > 0 ? `на сегодня: ${todayHomework.length}` : 'на сегодня пусто'}
-            action="Открыть"
-            onAction={() => router.navigate('/homework')}
-          />
-          {todayHomework.length === 0 ? (
-            <Pressable
-              onPress={() => router.navigate('/homework')}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.homeworkEmpty}>
-                <ThemedView style={[styles.homeworkEmptyIcon, { backgroundColor: theme.accentSoft }]}>
-                  <AppIcon ios="plus" android="add" color={theme.accent} size={22} />
-                </ThemedView>
-                <ThemedText type="smallBold">Добавить ДЗ к сегодняшним парам</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {homeworkItems.length > 0
-                    ? `В архиве ${homeworkItems.length} ${entriesLabel(homeworkItems.length)}`
-                    : 'Пока ничего не записано'}
-                </ThemedText>
-              </ThemedView>
-            </Pressable>
-          ) : (
-            todayHomework.slice(0, 3).map((item) => {
-              const lesson = todayLessons.find((entry) => entry.id === item.lessonId);
-              const summary = homeworkSummary(item);
-              return (
-                <Pressable
-                  key={`${item.date}:${item.lessonId}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/homework-entry',
-                      params: { lessonId: item.lessonId, date: item.date },
-                    })
-                  }
-                  style={({ pressed }) => pressed && styles.pressed}>
-                  <ThemedView type="backgroundElement" style={styles.homeworkRow}>
-                    <ThemedView style={styles.homeworkMeta}>
-                      <ThemedText type="smallBold">{lesson?.start ?? '—'}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                        {lesson?.subject ?? 'Пара'}
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={2} style={styles.homeworkPreview}>
-                      {summary.text ||
-                        (summary.photoCount > 0 ? `Фото: ${summary.photoCount}` : '') ||
-                        (summary.linkCount > 0 ? `Ссылки: ${summary.linkCount}` : '') ||
-                        'Открыть'}
-                    </ThemedText>
-                    <AppIcon ios="chevron.right" android="chevron_right" color={theme.textSecondary} size={16} />
-                  </ThemedView>
-                </Pressable>
-              );
-            })
-          )}
-        </ThemedView>
       </ScrollView>
     </ThemedView>
   );
@@ -290,41 +230,6 @@ function StatusBadge({ status }: { status: NowStatus }) {
       ) : null}
       <ThemedText type="smallBold">{config.label}</ThemedText>
     </ThemedView>
-  );
-}
-
-function QuickAction({
-  label,
-  iosIcon,
-  androidIcon,
-  badge,
-  onPress,
-}: {
-  label: string;
-  iosIcon: string;
-  androidIcon: string;
-  badge?: string;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}>
-      <ThemedView type="backgroundElement" style={styles.quickActionInner}>
-        <ThemedView style={[styles.quickIconWrap, { backgroundColor: theme.accentSoft }]}>
-          <AppIcon ios={iosIcon} android={androidIcon} color={theme.accent} size={22} />
-        </ThemedView>
-        <ThemedText type="smallBold">{label}</ThemedText>
-        {badge ? (
-          <ThemedView style={[styles.quickBadge, { backgroundColor: theme.accent }]}>
-            <ThemedText type="smallBold" style={{ color: theme.background, fontSize: 11 }}>
-              {badge}
-            </ThemedText>
-          </ThemedView>
-        ) : null}
-      </ThemedView>
-    </Pressable>
   );
 }
 
@@ -364,19 +269,27 @@ function LessonTimelineRow({
   date,
   status,
   nowMinutes,
-  hasHomework,
+  prevLesson,
+  homeworkMap,
 }: {
   lesson: Lesson;
   date: string;
   status: NowStatus;
   nowMinutes: number;
-  hasHomework: boolean;
+  prevLesson?: Lesson;
+  homeworkMap: HomeworkMap;
 }) {
   const theme = useTheme();
   const isNow = status.kind === 'now' && status.lesson.id === lesson.id;
   const isPast = minutesFromMidnight(lesson.end) <= nowMinutes;
   const isNext =
     (status.kind === 'upcoming' || status.kind === 'break') && status.next.id === lesson.id;
+  const entry = homeworkMap[homeworkKey(date, lesson.id)];
+  const hwStatus = homeworkCompletionStatus(entry);
+  const summary = homeworkSummary(entry);
+  const prevStatus = prevLesson
+    ? homeworkCompletionStatus(homeworkMap[homeworkKey(date, prevLesson.id)])
+    : 'none';
 
   return (
     <Pressable
@@ -416,14 +329,23 @@ function LessonTimelineRow({
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {formatPlace(lesson)}
           </ThemedText>
+          {prevStatus !== 'none' ? (
+            <HomeworkStatusChip status={prevStatus} compact prefix="К след. паре" />
+          ) : null}
+          {summary.text ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {summary.text}
+            </ThemedText>
+          ) : null}
+          <HomeworkStatusChip
+            status={hwStatus === 'done' ? 'done' : 'todo'}
+            compact
+            onToggle={() => {
+              void setHomeworkDone(date, lesson.id, hwStatus !== 'done');
+            }}
+          />
         </ThemedView>
-        <ThemedView style={styles.lessonTrail}>
-          {hasHomework ? (
-            <ThemedView style={[styles.hwDot, { backgroundColor: theme.accent }]} />
-          ) : (
-            <AppIcon ios="plus" android="add" color={theme.textSecondary} size={16} />
-          )}
-        </ThemedView>
+        <AppIcon ios="chevron.right" android="chevron_right" color={theme.textSecondary} size={16} />
       </ThemedView>
     </Pressable>
   );
@@ -439,18 +361,6 @@ function pairsLabel(count: number): string {
     return 'пары';
   }
   return 'пар';
-}
-
-function entriesLabel(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) {
-    return 'запись';
-  }
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
-    return 'записи';
-  }
-  return 'записей';
 }
 
 const styles = StyleSheet.create({
@@ -517,40 +427,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  quickRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    backgroundColor: 'transparent',
-  },
-  quickAction: {
-    flex: 1,
-  },
-  quickActionInner: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: 96,
-    justifyContent: 'center',
-  },
-  quickIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickBadge: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.one,
-  },
   section: {
     gap: Spacing.two,
     backgroundColor: 'transparent',
@@ -589,17 +465,6 @@ const styles = StyleSheet.create({
     gap: 2,
     backgroundColor: 'transparent',
   },
-  lessonTrail: {
-    width: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  hwDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   tomorrowCard: {
     padding: Spacing.three,
     borderRadius: Spacing.three,
@@ -615,34 +480,6 @@ const styles = StyleSheet.create({
     width: 48,
   },
   tomorrowSubject: {
-    flex: 1,
-  },
-  homeworkEmpty: {
-    padding: Spacing.four,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  homeworkEmptyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  homeworkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  homeworkMeta: {
-    width: 88,
-    gap: 2,
-    backgroundColor: 'transparent',
-  },
-  homeworkPreview: {
     flex: 1,
   },
   pressed: {

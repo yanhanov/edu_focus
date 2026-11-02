@@ -4,6 +4,11 @@ import { Pressable, StyleSheet, Switch } from 'react-native';
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import {
+  ACCENT_PALETTE_IDS,
+  ACCENT_PALETTES,
+  type AccentPaletteId,
+} from '@/constants/accent-palettes';
 import { Spacing } from '@/constants/theme';
 import { GROUPS, type GroupId } from '@/data/groups';
 import { useTheme } from '@/hooks/use-theme';
@@ -125,6 +130,57 @@ const THEME_OPTIONS: {
   { value: 'dark', label: 'Тёмная', ios: 'moon.fill', android: 'dark_mode' },
 ];
 
+type AccentPalettePickerProps = PickerChromeProps & {
+  palette: AccentPaletteId;
+  onSelect: (palette: AccentPaletteId) => void;
+};
+
+export function AccentPalettePicker({ palette, onSelect, hideTitle }: AccentPalettePickerProps) {
+  const colors = useTheme();
+
+  return (
+    <ThemedView style={styles.block}>
+      {hideTitle ? null : <ThemedText type="smallBold">Цветовая гамма</ThemedText>}
+      {!hideTitle ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Акцентные кнопки, выделения и иконки
+        </ThemedText>
+      ) : null}
+      <ThemedView style={styles.row}>
+        {ACCENT_PALETTE_IDS.map((id) => {
+          const selected = palette === id;
+          const pair = ACCENT_PALETTES[id].light;
+          return (
+            <Pressable
+              key={id}
+              onPress={() => onSelect(id)}
+              style={({ pressed }) => [styles.paletteTile, pressed && styles.pressed]}>
+              <ThemedView
+                type="backgroundElement"
+                style={[
+                  styles.paletteTileInner,
+                  selected && { borderColor: pair.accent, borderWidth: 2 },
+                ]}>
+                <ThemedView style={[styles.paletteSwatch, { backgroundColor: pair.accent }]}>
+                  <ThemedView style={[styles.paletteSwatchSoft, { backgroundColor: pair.accentSoft }]} />
+                </ThemedView>
+                <ThemedText type="smallBold" numberOfLines={1}>
+                  {ACCENT_PALETTES[id].label}
+                </ThemedText>
+                {selected ? (
+                  <ThemedView style={[styles.paletteCheck, { backgroundColor: colors.accent }]}>
+                    <AppIcon ios="checkmark" android="check" color={colors.background} size={10} />
+                  </ThemedView>
+                ) : null}
+              </ThemedView>
+            </Pressable>
+          );
+        })}
+      </ThemedView>
+    </ThemedView>
+  );
+}
+
 export function ThemePicker({ theme, onSelect, hideTitle }: ThemePickerProps) {
   const colors = useTheme();
 
@@ -162,9 +218,11 @@ type NotificationPickerProps = {
   settings: NotificationSettings;
   onChange: (settings: NotificationSettings) => void;
   hideTitle?: boolean;
+  /** Без декоративного блока сверху — для онбординга */
+  compact?: boolean;
 };
 
-export function NotificationPicker({ settings, onChange, hideTitle }: NotificationPickerProps) {
+export function NotificationPicker({ settings, onChange, hideTitle, compact }: NotificationPickerProps) {
   const theme = useTheme();
   const timeLabel = formatReminderTime(settings);
   const timeOptions = reminderTimeOptions(settings);
@@ -173,19 +231,25 @@ export function NotificationPicker({ settings, onChange, hideTitle }: Notificati
     <ThemedView style={styles.block}>
       {hideTitle ? null : <ThemedText type="smallBold">Уведомления</ThemedText>}
       <ThemedView type="backgroundElement" style={styles.notificationCard}>
-        <ThemedView style={[styles.notificationHero, { backgroundColor: theme.accentSoft }]}>
-          <ThemedView style={[styles.notificationIcon, { backgroundColor: theme.background }]}>
-            <AppIcon ios="bell.badge.fill" android="notifications" color={theme.accent} size={22} />
+        {compact ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {settings.enabled ? `Сейчас: в ${timeLabel}` : 'Сейчас: выключены'}
+          </ThemedText>
+        ) : (
+          <ThemedView style={[styles.notificationHero, { backgroundColor: theme.accentSoft }]}>
+            <ThemedView style={[styles.notificationIcon, { backgroundColor: theme.background }]}>
+              <AppIcon ios="bell.badge.fill" android="notifications" color={theme.accent} size={22} />
+            </ThemedView>
+            <ThemedView style={styles.notificationHeroCopy}>
+              <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                {settings.enabled ? `Напоминания в ${timeLabel}` : 'Напоминания выключены'}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Вечером накануне пары, если ДЗ записано
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
-          <ThemedView style={styles.notificationHeroCopy}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {settings.enabled ? `Напоминания в ${timeLabel}` : 'Напоминания выключены'}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Вечером накануне пары, если ДЗ записано
-            </ThemedText>
-          </ThemedView>
-        </ThemedView>
+        )}
 
         <ThemedView style={styles.switchRow}>
           <ThemedText type="smallBold">Включить уведомления</ThemedText>
@@ -325,6 +389,40 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paletteTile: {
+    width: '48%',
+    minWidth: 140,
+    flexGrow: 1,
+  },
+  paletteTileInner: {
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    gap: Spacing.two,
+    position: 'relative',
+  },
+  paletteSwatch: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paletteSwatchSoft: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  paletteCheck: {
+    position: 'absolute',
+    top: Spacing.two,
+    right: Spacing.two,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

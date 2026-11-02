@@ -11,7 +11,7 @@ import { scheduleNotificationAsync } from 'expo-notifications/build/scheduleNoti
 import { setNotificationChannelAsync } from 'expo-notifications/build/setNotificationChannelAsync';
 
 import { getGroup } from '@/data/groups';
-import { isHomeworkEmpty, loadHomeworkMap } from '@/lib/homework';
+import { homeworkCompletionStatus, isHomeworkContentEmpty, loadHomeworkMap } from '@/lib/homework';
 import {
   formatReminderTime,
   REMINDER_TIME_PRESETS,
@@ -104,7 +104,10 @@ export async function syncHomeworkReminders(profile: Profile = getCachedProfile(
     const now = Date.now();
 
     for (const entry of Object.values(homeworkMap)) {
-      if (isHomeworkEmpty(entry)) {
+      if (homeworkCompletionStatus(entry) !== 'todo') {
+        continue;
+      }
+      if (isHomeworkContentEmpty(entry)) {
         continue;
       }
       const lesson = getLessonById(entry.lessonId, lessons);

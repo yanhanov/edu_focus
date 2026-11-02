@@ -2,7 +2,9 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
+import { ACCENT_PALETTES } from '@/constants/accent-palettes';
 import {
+  AccentPalettePicker,
   GroupPicker,
   NotificationPicker,
   ProfileSection,
@@ -28,7 +30,8 @@ const THEME_LABELS: Record<ThemePreference, string> = {
 export default function ProfileScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { profile, group, setGroupId, setSubgroup, setTheme, setNotifications } = useProfile();
+  const { profile, group, setGroupId, setSubgroup, setTheme, setAccentPalette, setNotifications } =
+    useProfile();
 
   const subgroupLabel =
     profile.subgroup === 1 ? 'Подгруппа 1' : profile.subgroup === 2 ? 'Подгруппа 2' : 'Вся группа';
@@ -68,6 +71,7 @@ export default function ProfileScreen() {
           <ThemedView style={styles.summaryPills}>
             <SummaryPill label={subgroupLabel} />
             <SummaryPill label={THEME_LABELS[profile.theme]} />
+            <SummaryPill label={ACCENT_PALETTES[profile.accentPalette].label} accent />
             <SummaryPill label={notifyLabel} accent={profile.notifications.enabled} />
           </ThemedView>
         </ThemedView>
@@ -96,8 +100,13 @@ export default function ProfileScreen() {
           />
         </ProfileSection>
 
-        <ProfileSection title="Оформление" subtitle="Тема интерфейса">
+        <ProfileSection title="Оформление" subtitle="Светлый или тёмный режим и акцентный цвет">
           <ThemePicker hideTitle theme={profile.theme} onSelect={setTheme} />
+          <AccentPalettePicker
+            hideTitle
+            palette={profile.accentPalette}
+            onSelect={setAccentPalette}
+          />
         </ProfileSection>
       </ScrollView>
     </ThemedView>
