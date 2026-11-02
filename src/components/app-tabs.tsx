@@ -2,12 +2,12 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { Platform } from 'react-native';
 
 import { APP_TABS } from '@/constants/tabs';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const colors = useTheme();
+
+  const androidTabs = Platform.OS === 'android';
 
   return (
     <NativeTabs
@@ -17,10 +17,11 @@ export default function AppTabs() {
         selected: colors.accent,
       }}
       tintColor={colors.accent}
+      disableIndicator={androidTabs}
       indicatorColor={colors.accentSoft}
       rippleColor={colors.accentSoft}
       labelVisibilityMode="unlabeled"
-      tabBarRespectsIMEInsets={Platform.OS === 'android'}>
+      tabBarRespectsIMEInsets={androidTabs}>
       {APP_TABS.map((tab) => (
         <NativeTabs.Trigger
           key={tab.name}

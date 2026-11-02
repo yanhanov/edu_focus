@@ -1,8 +1,7 @@
-import { ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppIcon } from '@/components/app-icon';
-import { ACCENT_PALETTES } from '@/constants/accent-palettes';
+import { AppIcon } from "@/components/app-icon";
 import {
   AccentPalettePicker,
   GroupPicker,
@@ -10,34 +9,46 @@ import {
   ProfileSection,
   SubgroupPicker,
   ThemePicker,
-} from '@/components/profile/profile-fields';
-import { ScheduleUpdateSection } from '@/components/profile/schedule-update-section';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useProfile } from '@/hooks/use-profile';
-import { useTheme } from '@/hooks/use-theme';
-import { formatReminderTime } from '@/lib/notifications-config';
-import { ensureNotificationPermissionsRuntime } from '@/lib/notifications-runtime';
-import type { ThemePreference } from '@/lib/profile';
+} from "@/components/profile/profile-fields";
+import { ScheduleUpdateSection } from "@/components/profile/schedule-update-section";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { ACCENT_PALETTES } from "@/constants/accent-palettes";
+import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
+import { useProfile } from "@/hooks/use-profile";
+import { useTheme } from "@/hooks/use-theme";
+import { formatReminderTime } from "@/lib/notifications-config";
+import { ensureNotificationPermissionsRuntime } from "@/lib/notifications-runtime";
+import type { ThemePreference } from "@/lib/profile";
 
 const THEME_LABELS: Record<ThemePreference, string> = {
-  system: 'Системная',
-  light: 'Светлая',
-  dark: 'Тёмная',
+  system: "Системная",
+  light: "Светлая",
+  dark: "Тёмная",
 };
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { profile, group, setGroupId, setSubgroup, setTheme, setAccentPalette, setNotifications } =
-    useProfile();
+  const {
+    profile,
+    group,
+    setGroupId,
+    setSubgroup,
+    setTheme,
+    setAccentPalette,
+    setNotifications,
+  } = useProfile();
 
   const subgroupLabel =
-    profile.subgroup === 1 ? 'Подгруппа 1' : profile.subgroup === 2 ? 'Подгруппа 2' : 'Вся группа';
+    profile.subgroup === 1
+      ? "Подгруппа 1"
+      : profile.subgroup === 2
+        ? "Подгруппа 2"
+        : "Вся группа";
   const notifyLabel = profile.notifications.enabled
     ? `ДЗ в ${formatReminderTime(profile.notifications)}`
-    : 'Уведомления выкл.';
+    : "Уведомления выкл.";
 
   return (
     <ThemedView style={styles.screen}>
@@ -48,7 +59,8 @@ export default function ProfileScreen() {
             paddingTop: insets.top + Spacing.three,
             paddingBottom: insets.bottom + BottomTabInset + Spacing.three,
           },
-        ]}>
+        ]}
+      >
         <ThemedView style={styles.header}>
           <ThemedText type="subtitle">Профиль</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
@@ -56,9 +68,18 @@ export default function ProfileScreen() {
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={[styles.summary, { backgroundColor: theme.accentSoft }]}>
-          <ThemedView style={[styles.summaryIcon, { backgroundColor: theme.background }]}>
-            <AppIcon ios="person.crop.circle.fill" android="account_circle" color={theme.accent} size={28} />
+        <ThemedView
+          style={[styles.summary, { backgroundColor: theme.accentSoft }]}
+        >
+          <ThemedView
+            style={[styles.summaryIcon, { backgroundColor: theme.background }]}
+          >
+            <AppIcon
+              ios="person.crop.circle.fill"
+              android="account_circle"
+              color={theme.accent}
+              size={28}
+            />
           </ThemedView>
           <ThemedView style={styles.summaryCopy}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
@@ -71,21 +92,39 @@ export default function ProfileScreen() {
           <ThemedView style={styles.summaryPills}>
             <SummaryPill label={subgroupLabel} />
             <SummaryPill label={THEME_LABELS[profile.theme]} />
-            <SummaryPill label={ACCENT_PALETTES[profile.accentPalette].label} accent />
-            <SummaryPill label={notifyLabel} accent={profile.notifications.enabled} />
+            <SummaryPill
+              label={ACCENT_PALETTES[profile.accentPalette].label}
+              accent
+            />
+            <SummaryPill
+              label={notifyLabel}
+              accent={profile.notifications.enabled}
+            />
           </ThemedView>
         </ThemedView>
 
         <ProfileSection
           title="Учёба"
-          subtitle="Группа и подгруппа — лабораторные другой подгруппы скрываются">
-          <GroupPicker hideTitle groupId={profile.groupId} onSelect={setGroupId} />
-          <SubgroupPicker hideTitle subgroup={profile.subgroup} onSelect={setSubgroup} />
+          subtitle="Группа и подгруппа — лабораторные другой подгруппы скрываются"
+        >
+          <GroupPicker
+            hideTitle
+            groupId={profile.groupId}
+            onSelect={setGroupId}
+          />
+          <SubgroupPicker
+            hideTitle
+            subgroup={profile.subgroup}
+            onSelect={setSubgroup}
+          />
         </ProfileSection>
 
         <ScheduleUpdateSection groupId={profile.groupId} />
 
-        <ProfileSection title="Уведомления" subtitle="Напоминание о записанном ДЗ накануне пары">
+        <ProfileSection
+          title="Уведомления"
+          subtitle="Напоминание о записанном ДЗ накануне пары"
+        >
           <NotificationPicker
             hideTitle
             settings={profile.notifications}
@@ -100,7 +139,10 @@ export default function ProfileScreen() {
           />
         </ProfileSection>
 
-        <ProfileSection title="Оформление" subtitle="Светлый или тёмный режим и акцентный цвет">
+        <ProfileSection
+          title="Оформление"
+          subtitle="Светлый или тёмный режим и акцентный цвет"
+        >
           <ThemePicker hideTitle theme={profile.theme} onSelect={setTheme} />
           <AccentPalettePicker
             hideTitle
@@ -117,7 +159,11 @@ function SummaryPill({ label, accent }: { label: string; accent?: boolean }) {
   const theme = useTheme();
   return (
     <ThemedView style={[styles.pill, { backgroundColor: theme.background }]}>
-      <ThemedText type="smallBold" style={accent ? { color: theme.accent } : undefined} numberOfLines={1}>
+      <ThemedText
+        type="smallBold"
+        style={accent ? { color: theme.accent } : undefined}
+        numberOfLines={1}
+      >
         {label}
       </ThemedText>
     </ThemedView>
@@ -130,8 +176,8 @@ const styles = StyleSheet.create({
   },
   content: {
     maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
   },
@@ -147,23 +193,23 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   summaryCopy: {
     gap: Spacing.one,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   summaryPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.two,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   pill: {
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half + 2,
     borderRadius: Spacing.five,
-    maxWidth: '100%',
+    maxWidth: "100%",
   },
 });

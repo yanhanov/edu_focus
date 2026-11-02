@@ -11,6 +11,7 @@ import {
 } from '@/constants/accent-palettes';
 import { Spacing } from '@/constants/theme';
 import { GROUPS, type GroupId } from '@/data/groups';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatReminderTime, reminderTimeOptions } from '@/lib/notifications-config';
 import type { NotificationSettings, SubgroupPreference, ThemePreference } from '@/lib/profile';
@@ -137,19 +138,21 @@ type AccentPalettePickerProps = PickerChromeProps & {
 
 export function AccentPalettePicker({ palette, onSelect, hideTitle }: AccentPalettePickerProps) {
   const colors = useTheme();
+  const scheme = useColorScheme();
+  const mode = scheme === 'dark' ? 'dark' : 'light';
 
   return (
     <ThemedView style={styles.block}>
       {hideTitle ? null : <ThemedText type="smallBold">Цветовая гамма</ThemedText>}
       {!hideTitle ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Акцентные кнопки, выделения и иконки
+          Вкладки, кнопки и выделения — {ACCENT_PALETTE_IDS.length} вариантов
         </ThemedText>
       ) : null}
-      <ThemedView style={styles.row}>
+      <ThemedView style={styles.paletteGrid}>
         {ACCENT_PALETTE_IDS.map((id) => {
           const selected = palette === id;
-          const pair = ACCENT_PALETTES[id].light;
+          const pair = ACCENT_PALETTES[id][mode];
           return (
             <Pressable
               key={id}
@@ -164,7 +167,7 @@ export function AccentPalettePicker({ palette, onSelect, hideTitle }: AccentPale
                 <ThemedView style={[styles.paletteSwatch, { backgroundColor: pair.accent }]}>
                   <ThemedView style={[styles.paletteSwatchSoft, { backgroundColor: pair.accentSoft }]} />
                 </ThemedView>
-                <ThemedText type="smallBold" numberOfLines={1}>
+                <ThemedText type="smallBold" style={styles.paletteLabel} numberOfLines={1}>
                   {ACCENT_PALETTES[id].label}
                 </ThemedText>
                 {selected ? (
@@ -392,29 +395,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  paletteGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
   paletteTile: {
-    width: '48%',
-    minWidth: 140,
+    width: '31%',
+    minWidth: 96,
     flexGrow: 1,
   },
   paletteTileInner: {
-    padding: Spacing.three,
+    padding: Spacing.two,
     borderRadius: Spacing.three,
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: Spacing.one,
     position: 'relative',
   },
   paletteSwatch: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   paletteSwatchSoft: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+  },
+  paletteLabel: {
+    fontSize: 11,
+    textAlign: 'center',
   },
   paletteCheck: {
     position: 'absolute',

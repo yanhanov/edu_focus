@@ -42,9 +42,13 @@ function FloatingTabBar(props: TabListProps) {
         },
       ]}>
       <ThemedView
-        type="backgroundElement"
         style={[
           styles.bar,
+          {
+            backgroundColor: theme.backgroundElement,
+            borderColor: theme.accentSoft,
+            borderWidth: 1,
+          },
           Platform.OS === 'web'
             ? { boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }
             : {
@@ -85,13 +89,17 @@ function TabIconButton({
       <ThemedView
         style={[
           styles.tabSlot,
-          isFocused && { backgroundColor: theme.accentSoft },
+          isFocused && {
+            borderWidth: 1,
+            borderColor: theme.accentSoft,
+            backgroundColor: theme.background,
+          },
         ]}>
         <AppIcon
           ios={isFocused ? tab.icon.ios.selected : tab.icon.ios.default}
           android={isFocused ? tab.icon.android.selected : tab.icon.android.default}
           color={isFocused ? theme.accent : theme.textSecondary}
-          size={24}
+          size={isFocused ? 25 : 24}
         />
       </ThemedView>
     </Pressable>
