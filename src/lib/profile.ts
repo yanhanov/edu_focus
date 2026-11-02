@@ -6,16 +6,32 @@ import { DEFAULT_GROUP_ID, isGroupId, type GroupId } from '@/data/groups';
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type SubgroupPreference = 1 | 2 | null;
 
+export type NotificationSettings = {
+  enabled: boolean;
+  hour: number;
+  minute: number;
+};
+
 export type Profile = {
   groupId: GroupId;
   subgroup: SubgroupPreference;
   theme: ThemePreference;
+  onboardingComplete: boolean;
+  notifications: NotificationSettings;
+};
+
+export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
+  enabled: true,
+  hour: 20,
+  minute: 0,
 };
 
 export const DEFAULT_PROFILE: Profile = {
   groupId: DEFAULT_GROUP_ID,
   subgroup: null,
   theme: 'system',
+  onboardingComplete: false,
+  notifications: DEFAULT_NOTIFICATIONS,
 };
 
 const STORAGE_KEY = 'edu-focus.profile.v1';
@@ -46,7 +62,25 @@ export function applyThemePreference(theme: ThemePreference) {
   }
 }
 
-function parseProfile(value: unknown): Profile {
+function parseNotifications(value: unknown): NotificationSettings {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_NOTIFICATIONS;
+  }
+  const raw = value as Partial<NotificationSettings>;
+  const hour =
+    typeof raw.hour === 'number' && raw.hour >= 0 && raw.hour <= 23 ? raw.hour : DEFAULT_NOTIFICATIONS.hour;
+  const minute =
+    typeof raw.minute === 'number' && raw.minute >= 0 && raw.minute <= 59
+      ? raw.minute
+      : DEFAULT_NOTIFICATIONS.minute;
+  return {
+    enabled: typeof raw.enabled === 'boolean' ? raw.enabled : DEFAULT_NOTIFICATIONS.enabled,
+    hour,
+    minute,
+  };
+}
+
+function parseProfile(value: unknown, hasStoredProfile: boolean): Profile {
   if (!value || typeof value !== 'object') {
     return DEFAULT_PROFILE;
   }
@@ -55,6 +89,9 @@ function parseProfile(value: unknown): Profile {
     groupId: typeof raw.groupId === 'string' && isGroupId(raw.groupId) ? raw.groupId : DEFAULT_PROFILE.groupId,
     subgroup: raw.subgroup === 1 || raw.subgroup === 2 ? raw.subgroup : null,
     theme: raw.theme === 'light' || raw.theme === 'dark' || raw.theme === 'system' ? raw.theme : 'system',
+    onboardingComplete:
+      typeof raw.onboardingComplete === 'boolean' ? raw.onboardingComplete : hasStoredProfile,
+    notifications: parseNotifications(raw.notifications),
   };
 }
 
@@ -66,7 +103,7 @@ export async function loadProfile(): Promise<Profile> {
     return cached;
   }
   try {
-    cached = parseProfile(JSON.parse(stored) as unknown);
+    cached = parseProfile(JSON.parse(stored) as unknown, true);
   } catch {
     cached = DEFAULT_PROFILE;
   }

@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { getGroup, type Group, type GroupId } from '@/data/groups';
+import { syncHomeworkRemindersRuntime } from '@/lib/notifications-runtime';
 import {
   DEFAULT_PROFILE,
   loadProfile,
   saveProfile,
+  type NotificationSettings,
   type Profile,
   type SubgroupPreference,
   type ThemePreference,
@@ -18,6 +20,8 @@ type ProfileContextValue = {
   setGroupId: (groupId: GroupId) => void;
   setSubgroup: (subgroup: SubgroupPreference) => void;
   setTheme: (theme: ThemePreference) => void;
+  setNotifications: (notifications: NotificationSettings) => void;
+  completeOnboarding: (next: Profile) => Promise<void>;
 };
 
 export const ProfileContext = createContext<ProfileContextValue | null>(null);
@@ -37,6 +41,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         setProfile(next);
         setReady(true);
         syncScheduleWidget();
+        void syncHomeworkRemindersRuntime(next);
       }
     });
     return () => {
@@ -44,11 +49,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const update = (partial: Partial<Profile>) => {
-    const next = { ...profile, ...partial };
+  const persist = (next: Profile) => {
     setProfile(next);
-    void saveProfile(next);
-    syncScheduleWidget();
+    void saveProfile(next).then(() => {
+      syncScheduleWidget();
+      void syncHomeworkRemindersRuntime(next);
+    });
+  };
+
+  const update = (partial: Partial<Profile>) => {
+    persist({ ...profile, ...partial });
   };
 
   return (
@@ -60,6 +70,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         setGroupId: (groupId) => update({ groupId }),
         setSubgroup: (subgroup) => update({ subgroup }),
         setTheme: (theme) => update({ theme }),
+        setNotifications: (notifications) => update({ notifications }),
+        completeOnboarding: async (next) => {
+          const completed = { ...next, onboardingComplete: true };
+          persist(completed);
+        },
       }}>
       {children}
     </ProfileContext.Provider>
