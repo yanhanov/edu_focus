@@ -12,6 +12,7 @@ import { useNow } from '@/hooks/use-now';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
 import { HomeworkStatusChip } from '@/components/homework/homework-status-chip';
+import { LessonTypeBadge } from '@/components/schedule/lesson-type-badge';
 import {
   homeworkCompletionStatus,
   listHomeworkEntries,
@@ -171,6 +172,7 @@ function HomeworkRow({
             <ThemedText type="smallBold" style={styles.subjectTitle}>
               {lesson.subject}
             </ThemedText>
+            <LessonTypeBadge type={lesson.type} />
             {alwaysShowStatus || completion !== 'none' ? (
               <HomeworkStatusChip
                 status={completion === 'done' ? 'done' : 'todo'}

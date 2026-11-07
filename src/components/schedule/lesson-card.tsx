@@ -1,11 +1,12 @@
 import { Pressable, StyleSheet } from 'react-native';
 
+import { LessonTypeBadge } from '@/components/schedule/lesson-type-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Lesson } from '@/data/schedule-11701126';
-import { formatPlace, LESSON_TYPE_LABELS } from '@/lib/schedule';
+import { formatPlace } from '@/lib/schedule';
 
 export type HomeworkBadge = {
   text: string;
@@ -51,11 +52,17 @@ export function LessonCard({ lesson, isCurrent = false, homework, onPress }: Les
         </ThemedView>
 
         <ThemedView style={[styles.body, { backgroundColor: 'transparent' }]}>
-          <ThemedText type="smallBold" style={isCurrent ? { color: theme.accent } : undefined}>
-            {lesson.subject}
-          </ThemedText>
+          <ThemedView style={[styles.titleRow, { backgroundColor: 'transparent' }]}>
+            <ThemedText
+              type="smallBold"
+              style={[styles.subject, isCurrent ? { color: theme.accent } : undefined]}
+              numberOfLines={2}>
+              {lesson.subject}
+            </ThemedText>
+            <LessonTypeBadge type={lesson.type} highlighted={isCurrent} />
+          </ThemedView>
           <ThemedText type="small" themeColor="textSecondary">
-            {lesson.type === 'pe' ? lesson.teacher : `${LESSON_TYPE_LABELS[lesson.type]} · ${lesson.teacher}`}
+            {lesson.teacher}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {formatPlace(lesson)}
@@ -89,5 +96,14 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     gap: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+  },
+  subject: {
+    flex: 1,
+    minWidth: 0,
   },
 });

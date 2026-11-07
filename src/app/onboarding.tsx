@@ -5,11 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppIcon } from "@/components/app-icon";
 import {
-  AccentPalettePicker,
   GroupPicker,
   NotificationPicker,
   SubgroupPicker,
-  ThemePicker,
 } from "@/components/profile/profile-fields";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -18,14 +16,9 @@ import type { GroupId } from "@/data/groups";
 import { useProfile } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { ensureNotificationPermissionsRuntime } from "@/lib/notifications-runtime";
-import type {
-  NotificationSettings,
-  Profile,
-  SubgroupPreference,
-  ThemePreference,
-} from "@/lib/profile";
+import type { NotificationSettings, Profile, SubgroupPreference } from "@/lib/profile";
 
-const STEPS = ["intro", "group", "subgroup", "notifications", "theme"] as const;
+const STEPS = ["intro", "group", "subgroup", "notifications"] as const;
 type Step = (typeof STEPS)[number];
 
 const STEP_META: Record<Step, { title: string; subtitle: string }> = {
@@ -45,10 +38,6 @@ const STEP_META: Record<Step, { title: string; subtitle: string }> = {
     title: "Напоминания",
     subtitle: "Вечером накануне пары, если ДЗ записано и ещё не сделано",
   },
-  theme: {
-    title: "Оформление",
-    subtitle: "Режим и цветовая гамма — потом в профиле",
-  },
 };
 
 export default function OnboardingScreen() {
@@ -63,7 +52,7 @@ export default function OnboardingScreen() {
   }
 
   const stepIndex = STEPS.indexOf(step);
-  const isLast = step === "theme";
+  const isLast = step === "notifications";
   const meta = STEP_META[step];
 
   const next = async () => {
@@ -144,24 +133,6 @@ export default function OnboardingScreen() {
               setDraft({ ...draft, notifications })
             }
           />
-        ) : null}
-        {step === "theme" ? (
-          <>
-            <ThemePicker
-              hideTitle
-              theme={draft.theme}
-              onSelect={(themePreference: ThemePreference) =>
-                setDraft({ ...draft, theme: themePreference })
-              }
-            />
-            <AccentPalettePicker
-              hideTitle
-              palette={draft.accentPalette}
-              onSelect={(accentPalette) =>
-                setDraft({ ...draft, accentPalette })
-              }
-            />
-          </>
         ) : null}
       </ScrollView>
 

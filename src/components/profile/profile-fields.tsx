@@ -96,6 +96,14 @@ type SubgroupPickerProps = PickerChromeProps & {
 };
 
 export function SubgroupPicker({ subgroup, onSelect, hideTitle }: SubgroupPickerProps) {
+  const theme = useTheme();
+
+  const options: { value: SubgroupPreference; label: string }[] = [
+    { value: null, label: 'Вся группа' },
+    { value: 1, label: '1' },
+    { value: 2, label: '2' },
+  ];
+
   return (
     <ThemedView style={styles.block}>
       {hideTitle ? null : <ThemedText type="smallBold">Подгруппа</ThemedText>}
@@ -104,11 +112,39 @@ export function SubgroupPicker({ subgroup, onSelect, hideTitle }: SubgroupPicker
           Лабораторные другой подгруппы скрываются
         </ThemedText>
       ) : null}
-      <ThemedView type="backgroundElement" style={styles.chipCard}>
-        <ThemedView style={styles.row}>
-          <Chip label="Вся группа" selected={subgroup === null} onPress={() => onSelect(null)} flex />
-          <Chip label="1" selected={subgroup === 1} onPress={() => onSelect(1)} flex />
-          <Chip label="2" selected={subgroup === 2} onPress={() => onSelect(2)} flex />
+      <ThemedView type="backgroundElement" style={styles.subgroupCard}>
+        <ThemedView style={styles.segmentRow}>
+          {options.map((option) => {
+            const selected = subgroup === option.value;
+            return (
+              <Pressable
+                key={option.label}
+                onPress={() => onSelect(option.value)}
+                style={({ pressed }) => [
+                  styles.segmentPressable,
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedView
+                  style={[
+                    styles.segment,
+                    selected && { backgroundColor: theme.accent },
+                    !selected && { backgroundColor: 'transparent' },
+                  ]}>
+                  <ThemedText
+                    type="smallBold"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                    style={[
+                      styles.segmentLabel,
+                      selected ? { color: theme.background } : undefined,
+                    ]}>
+                    {option.label}
+                  </ThemedText>
+                </ThemedView>
+              </Pressable>
+            );
+          })}
         </ThemedView>
       </ThemedView>
     </ThemedView>
@@ -366,6 +402,35 @@ const styles = StyleSheet.create({
   chipCard: {
     padding: Spacing.two,
     borderRadius: Spacing.three,
+  },
+  subgroupCard: {
+    padding: Spacing.half + 2,
+    borderRadius: Spacing.three,
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'stretch',
+    gap: Spacing.one,
+    backgroundColor: 'transparent',
+  },
+  segmentPressable: {
+    flex: 1,
+    minWidth: 0,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Spacing.two + 2,
+  },
+  segmentLabel: {
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 18,
   },
   chip: {
     minWidth: 72,

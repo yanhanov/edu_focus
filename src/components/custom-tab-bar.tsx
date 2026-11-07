@@ -1,5 +1,5 @@
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs/types';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -8,13 +8,16 @@ import { useTheme } from '@/hooks/use-theme';
 
 export function CustomTabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const compact = width < 380;
+  const iconSize = compact ? 20 : 22;
 
   return (
     <View
       style={[
         styles.barOuter,
         {
-          paddingBottom: Math.max(insets.bottom, 6),
+          paddingBottom: Math.max(insets.bottom, 8),
           backgroundColor: theme.background,
           borderTopColor: theme.backgroundSelected,
         },
@@ -38,18 +41,29 @@ export function CustomTabBar({ state, navigateToTab, insets }: BottomTabBarProps
             accessibilityState={focused ? { selected: true } : {}}
             accessibilityLabel={tab.label}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
-            <View style={[styles.iconBadge, focused && { backgroundColor: theme.accentSoft }]}>
+            <View
+              style={[
+                styles.iconBadge,
+                compact && styles.iconBadgeCompact,
+                focused && { backgroundColor: theme.accentSoft },
+              ]}>
               <AppIcon
                 ios={focused ? tab.icon.ios.selected : tab.icon.ios.default}
                 android={focused ? tab.icon.android.selected : tab.icon.android.default}
                 color={focused ? theme.accent : theme.textSecondary}
-                size={22}
+                size={iconSize}
               />
             </View>
             <ThemedText
               type="small"
               numberOfLines={1}
-              style={[styles.label, { color: focused ? theme.accent : theme.textSecondary }]}>
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+              style={[
+                styles.label,
+                compact && styles.labelCompact,
+                { color: focused ? theme.accent : theme.textSecondary },
+              ]}>
               {tab.label}
             </ThemedText>
           </Pressable>
@@ -62,18 +76,20 @@ export function CustomTabBar({ state, navigateToTab, insets }: BottomTabBarProps
 const styles = StyleSheet.create({
   barOuter: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-around',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 6,
-    paddingHorizontal: 4,
+    paddingTop: 8,
+    paddingHorizontal: 6,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: 4,
+    gap: 3,
+    paddingVertical: 2,
     minWidth: 0,
+    maxWidth: '25%',
   },
   iconBadge: {
     width: 40,
@@ -82,10 +98,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconBadgeCompact: {
+    width: 36,
+    height: 28,
+    borderRadius: 14,
+  },
   label: {
     fontSize: 11,
-    lineHeight: 14,
+    lineHeight: 13,
     fontWeight: '600',
+    textAlign: 'center',
+    width: '100%',
+    paddingHorizontal: 2,
+  },
+  labelCompact: {
+    fontSize: 10,
+    lineHeight: 12,
   },
   pressed: {
     opacity: 0.65,

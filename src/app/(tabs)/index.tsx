@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import type { Lesson } from '@/data/schedule-11701126';
 import { HomeworkStatusChip } from '@/components/homework/homework-status-chip';
+import { LessonTypeBadge } from '@/components/schedule/lesson-type-badge';
 import { homeworkSummary, useHomeworkMap } from '@/hooks/use-homework';
 import { useNow } from '@/hooks/use-now';
 import { useProfile } from '@/hooks/use-profile';
@@ -194,6 +195,7 @@ export default function HomeScreen() {
                   <ThemedText type="small" style={styles.tomorrowSubject} numberOfLines={1}>
                     {lesson.subject}
                   </ThemedText>
+                  <LessonTypeBadge type={lesson.type} />
                 </ThemedView>
               ))}
               {tomorrowLessons.length > 4 ? (
@@ -320,12 +322,16 @@ function LessonTimelineRow({
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.lessonBody}>
-          <ThemedText
-            type="smallBold"
-            themeColor={isPast && !isNow ? 'textSecondary' : undefined}
-            numberOfLines={1}>
-            {lesson.subject}
-          </ThemedText>
+          <ThemedView style={[styles.lessonTitleRow, { backgroundColor: 'transparent' }]}>
+            <ThemedText
+              type="smallBold"
+              themeColor={isPast && !isNow ? 'textSecondary' : undefined}
+              numberOfLines={1}
+              style={styles.lessonSubject}>
+              {lesson.subject}
+            </ThemedText>
+            <LessonTypeBadge type={lesson.type} highlighted={isNow} />
+          </ThemedView>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {formatPlace(lesson)}
           </ThemedText>
@@ -464,6 +470,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     backgroundColor: 'transparent',
+  },
+  lessonTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  lessonSubject: {
+    flex: 1,
+    minWidth: 0,
   },
   tomorrowCard: {
     padding: Spacing.three,

@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     flexDirection: 'row',
+    flexWrap: 'nowrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.two,
@@ -128,6 +129,8 @@ const styles = StyleSheet.create({
   },
   tabPressable: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     alignItems: 'center',
   },
   tabSlot: {
