@@ -343,13 +343,15 @@ function LessonTimelineRow({
               {summary.text}
             </ThemedText>
           ) : null}
-          <HomeworkStatusChip
-            status={hwStatus === 'done' ? 'done' : 'todo'}
-            compact
-            onToggle={() => {
-              void setHomeworkDone(date, lesson.id, hwStatus !== 'done');
-            }}
-          />
+          {hwStatus !== 'none' ? (
+            <HomeworkStatusChip
+              status={hwStatus === 'done' ? 'done' : 'todo'}
+              compact
+              onToggle={() => {
+                void setHomeworkDone(date, lesson.id, hwStatus !== 'done');
+              }}
+            />
+          ) : null}
         </ThemedView>
         <AppIcon ios="chevron.right" android="chevron_right" color={theme.textSecondary} size={16} />
       </ThemedView>

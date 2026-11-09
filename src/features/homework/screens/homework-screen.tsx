@@ -94,7 +94,6 @@ export default function HomeworkListScreen() {
                 date={todayIso}
                 entry={homeworkMap[`${todayIso}:${lesson.id}`]}
                 emptyLabel="Добавить"
-                alwaysShowStatus
               />
             ))}
           </ThemedView>
@@ -142,13 +141,11 @@ function HomeworkRow({
   date,
   entry,
   emptyLabel,
-  alwaysShowStatus = false,
 }: {
   lesson: Lesson;
   date: string;
   entry?: HomeworkEntry;
   emptyLabel?: string;
-  alwaysShowStatus?: boolean;
 }) {
   const theme = useTheme();
   const summary = homeworkSummary(entry);
@@ -173,7 +170,7 @@ function HomeworkRow({
               {lesson.subject}
             </ThemedText>
             <LessonTypeBadge type={lesson.type} />
-            {alwaysShowStatus || completion !== 'none' ? (
+            {completion !== 'none' ? (
               <HomeworkStatusChip
                 status={completion === 'done' ? 'done' : 'todo'}
                 compact
