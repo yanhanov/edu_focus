@@ -1,11 +1,11 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from '@/shared/hooks/use-color-scheme';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { useHomeworkReminders } from '@/hooks/use-homework-reminders';
-import { ProfileProvider } from '@/hooks/use-profile';
+import { AnimatedSplashOverlay } from '@/shared/ui/animated-icon';
+import { useHomeworkReminders } from '@/features/homework/hooks/use-homework-reminders';
+import { ProfileProvider } from '@/features/profile/hooks/use-profile';
 import '@/widgets/ScheduleWidget';
 
 SplashScreen.preventAutoHideAsync();
@@ -28,9 +28,9 @@ function ThemedRoot() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="lesson" />
-        <Stack.Screen name="add-activity" />
-        <Stack.Screen name="homework-entry" />
+        <Stack.Screen name="(schedule)/lesson" />
+        <Stack.Screen name="(schedule)/add-activity" />
+        <Stack.Screen name="(homework)/homework-entry" />
       </Stack>
     </ThemeProvider>
   );

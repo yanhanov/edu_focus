@@ -17,7 +17,7 @@ import {
 } from '@expo/ui/jetpack-compose/modifiers';
 import { createWidget } from 'expo-widgets';
 
-import type { ScheduleWidgetProps, WidgetLesson } from '@/lib/schedule';
+import type { ScheduleWidgetProps, WidgetLesson } from '@/features/schedule/lib/schedule';
 
 const ACCENT = '#1B6B4A';
 const ACCENT_SOFT = '#D8EFE4';

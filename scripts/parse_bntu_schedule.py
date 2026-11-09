@@ -26,7 +26,7 @@ def extract_pdf_text(path: Path) -> str:
 
 def export_bundled(_group_id: str) -> dict:
     raise SystemExit(
-        "Use in-app Profile → Расписание → Экспорт JSON, or maintain src/data/schedule-*.ts in the repo."
+        "Use in-app Profile → Расписание → Экспорт JSON, or maintain src/features/schedule/data/schedule-*.ts in the repo."
     )
 
 

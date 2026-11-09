@@ -2,7 +2,7 @@ import { Text, VStack } from '@expo/ui/swift-ui';
 import { background, cornerRadius, font, foregroundStyle, padding } from '@expo/ui/swift-ui/modifiers';
 import { createWidget } from 'expo-widgets';
 
-import type { ScheduleWidgetProps, WidgetLesson } from '@/lib/schedule';
+import type { ScheduleWidgetProps, WidgetLesson } from '@/features/schedule/lib/schedule';
 
 const ACCENT = '#1B6B4A';
 const ACCENT_SOFT = '#D8EFE4';

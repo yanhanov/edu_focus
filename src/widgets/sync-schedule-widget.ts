@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { buildWidgetProps } from '@/lib/schedule';
+import { buildWidgetProps } from '@/features/schedule/lib/schedule';
 import ScheduleWidget from '@/widgets/ScheduleWidget';
 
 export function syncScheduleWidget(now = new Date()) {
