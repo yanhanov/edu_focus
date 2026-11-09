@@ -1,4 +1,12 @@
-export type LessonType = 'lecture' | 'practice' | 'lab' | 'pe';
+export type LessonType =
+  | 'lecture'
+  | 'practice'
+  | 'lab'
+  | 'pe'
+  | 'meeting'
+  | 'event'
+  | 'exam'
+  | 'credit';
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type WeekParity = 1 | 2;
 

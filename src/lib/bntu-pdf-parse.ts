@@ -10,6 +10,17 @@ const TYPE_MAP: Record<string, Lesson['type']> = {
   'практическое занятие': 'practice',
   'лабораторное занятие': 'lab',
   'физическая культура': 'pe',
+  собрание: 'meeting',
+  'учебное собрание': 'meeting',
+  мероприятие: 'event',
+  'учебное мероприятие': 'event',
+  'внеучебное мероприятие': 'event',
+  консультация: 'event',
+  экзамен: 'exam',
+  зачет: 'credit',
+  зачёт: 'credit',
+  'дифференцированный зачет': 'credit',
+  'дифференцированный зачёт': 'credit',
 };
 
 function normalizeEndTime(value: string): string {
@@ -55,7 +66,21 @@ function parseLessonBlock(block: string, weekday: Lesson['weekday'], index: numb
 
   const typeMatch = rest.match(/\(([^)]+)\)/);
   const typeLabel = typeMatch?.[1]?.toLowerCase() ?? '';
-  const type = TYPE_MAP[typeLabel] ?? (typeLabel.includes('лек') ? 'lecture' : typeLabel.includes('лаб') ? 'lab' : 'practice');
+  const type =
+    TYPE_MAP[typeLabel] ??
+    (typeLabel.includes('экзамен')
+      ? 'exam'
+      : typeLabel.includes('зач')
+        ? 'credit'
+        : typeLabel.includes('собран')
+          ? 'meeting'
+          : typeLabel.includes('меропр') || typeLabel.includes('консульт')
+            ? 'event'
+            : typeLabel.includes('лек')
+          ? 'lecture'
+          : typeLabel.includes('лаб')
+            ? 'lab'
+            : 'practice');
 
   const roomMatch = rest.match(/ауд\.?\s*([\wа-я]+(?:\s*к\.?\s*\d+)?)/i);
   const buildingMatch = rest.match(/к\.?\s*(\d+[а-я]?)/i);

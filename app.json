@@ -63,7 +63,9 @@
               "displayName": "Пары",
               "description": "Текущая пара и занятия на завтра",
               "ios": {
-                "supportedFamilies": ["systemMedium"],
+                "supportedFamilies": [
+                  "systemMedium"
+                ],
                 "initialLayout": "./src/widgets/ScheduleWidget.tsx"
               },
               "android": {
@@ -75,7 +77,8 @@
             }
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

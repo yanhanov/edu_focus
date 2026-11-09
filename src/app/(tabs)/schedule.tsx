@@ -1,9 +1,16 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import {
+  FlatList,
+  StyleSheet,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DaySwitcher } from '@/components/schedule/day-switcher';
+import { ScheduleAddButton } from '@/components/schedule/schedule-add-button';
 import { ScheduleDayPanel } from '@/components/schedule/schedule-day-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,6 +27,7 @@ import {
   getWeekday,
   startOfDay,
   STUDY_WEEKDAYS,
+  toIsoDate,
   weekParityLabel,
   type Weekday,
 } from '@/lib/schedule';
@@ -77,9 +85,9 @@ export default function ScheduleScreen() {
     [pageWidth],
   );
 
-  const openHomework = useCallback((lessonId: string, date: string) => {
+  const openLesson = useCallback((lessonId: string, date: string) => {
     router.push({
-      pathname: '/homework-entry',
+      pathname: '/lesson',
       params: { lessonId, date },
     });
   }, []);
@@ -98,10 +106,22 @@ export default function ScheduleScreen() {
             Группа {group.id}
             {profile.subgroup ? ` · подгруппа ${profile.subgroup}` : ''}
           </ThemedText>
-          <ThemedText type="subtitle">Расписание</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {weekLabel}
-          </ThemedText>
+          <ThemedView style={styles.titleRow}>
+            <ThemedView style={styles.titleCopy}>
+              <ThemedText type="subtitle">Расписание</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {weekLabel}
+              </ThemedText>
+            </ThemedView>
+            <ScheduleAddButton
+              onPress={() =>
+                router.push({
+                  pathname: '/add-activity',
+                  params: { date: toIsoDate(selectedDate) },
+                })
+              }
+            />
+          </ThemedView>
           <ThemedText type="small" themeColor="textSecondary">
             {SCHEDULE_PERIOD}
           </ThemedText>
@@ -140,7 +160,7 @@ export default function ScheduleScreen() {
             pageWidth={pageWidth}
             bottomInset={insets.bottom}
             currentLessonId={currentLessonId}
-            onOpenHomework={openHomework}
+            onOpenHomework={openLesson}
           />
         )}
         style={styles.pager}
@@ -161,6 +181,17 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: Spacing.four,
     gap: Spacing.one,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: 'transparent',
+  },
+  titleCopy: {
+    flex: 1,
+    gap: Spacing.one,
+    backgroundColor: 'transparent',
   },
   pager: {
     flex: 1,

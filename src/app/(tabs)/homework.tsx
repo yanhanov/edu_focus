@@ -46,9 +46,9 @@ function dateHeading(iso: string, todayIso: string): string {
   return `${WEEKDAY_SHORT[getWeekday(date)]} · ${formatDate(date)}`;
 }
 
-function openEntry(lessonId: string, date: string) {
+function openLesson(lessonId: string, date: string) {
   router.push({
-    pathname: '/homework-entry',
+    pathname: '/lesson',
     params: { lessonId, date },
   });
 }
@@ -157,7 +157,7 @@ function HomeworkRow({
 
   return (
     <Pressable
-      onPress={() => openEntry(lesson.id, date)}
+      onPress={() => openLesson(lesson.id, date)}
       style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedView style={styles.timeCol}>

@@ -75,7 +75,7 @@ export default function HomeScreen() {
       return;
     }
     router.push({
-      pathname: '/homework-entry',
+      pathname: '/lesson',
       params: { lessonId: currentLesson.id, date: todayIso },
     });
   };
@@ -135,7 +135,7 @@ export default function HomeScreen() {
                 size={18}
               />
               <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                {currentLesson ? 'Записать ДЗ' : 'Открыть расписание'}
+                {currentLesson ? 'Подробнее о паре' : 'Открыть расписание'}
               </ThemedText>
               <AppIcon ios="chevron.right" android="chevron_right" color={theme.accent} size={16} />
             </ThemedView>
@@ -297,7 +297,7 @@ function LessonTimelineRow({
     <Pressable
       onPress={() =>
         router.push({
-          pathname: '/homework-entry',
+          pathname: '/lesson',
           params: { lessonId: lesson.id, date },
         })
       }

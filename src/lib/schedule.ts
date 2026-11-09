@@ -35,7 +35,20 @@ export const LESSON_TYPE_LABELS: Record<Lesson['type'], string> = {
   practice: 'Практика',
   lab: 'Лабораторная',
   pe: 'Физкультура',
+  meeting: 'Собрание',
+  event: 'Мероприятие',
+  exam: 'Экзамен',
+  credit: 'Зачёт',
 };
+
+export function isActivityLesson(lesson: Pick<Lesson, 'type'>): boolean {
+  return (
+    lesson.type === 'meeting' ||
+    lesson.type === 'event' ||
+    lesson.type === 'exam' ||
+    lesson.type === 'credit'
+  );
+}
 
 export const STUDY_WEEKDAYS: Exclude<Weekday, 7>[] = [1, 2, 3, 4, 5, 6];
 
@@ -244,16 +257,25 @@ export function getNowStatus(lessons: Lesson[], now: Date): NowStatus {
 }
 
 export function formatPlace(lesson: Pick<Lesson, 'room' | 'building'>): string {
-  if (lesson.room) {
+  if (lesson.room && lesson.building) {
     return `ауд. ${lesson.room} к. ${lesson.building}`;
   }
-  return `к. ${lesson.building}`;
+  if (lesson.room) {
+    return `ауд. ${lesson.room}`;
+  }
+  if (lesson.building) {
+    return `к. ${lesson.building}`;
+  }
+  return '';
 }
 
 export function formatLessonTitle(lesson: Lesson): string {
   const type = LESSON_TYPE_LABELS[lesson.type];
   if (lesson.type === 'pe') {
     return lesson.subject;
+  }
+  if (isActivityLesson(lesson)) {
+    return `${lesson.subject} · ${type}`;
   }
   return `${lesson.subject} · ${type}`;
 }

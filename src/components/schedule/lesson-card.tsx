@@ -61,13 +61,17 @@ export function LessonCard({ lesson, isCurrent = false, homework, onPress }: Les
             </ThemedText>
             <LessonTypeBadge type={lesson.type} highlighted={isCurrent} />
           </ThemedView>
-          <ThemedText type="small" themeColor="textSecondary">
-            {lesson.teacher}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {formatPlace(lesson)}
-            {lesson.subgroup ? ` · подгруппа ${lesson.subgroup}` : ''}
-          </ThemedText>
+          {lesson.teacher ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {lesson.teacher}
+            </ThemedText>
+          ) : null}
+          {formatPlace(lesson) || lesson.subgroup ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatPlace(lesson)}
+              {lesson.subgroup ? `${formatPlace(lesson) ? ' · ' : ''}подгруппа ${lesson.subgroup}` : ''}
+            </ThemedText>
+          ) : null}
           {homework?.hasContent && details.length > 0 ? (
             <ThemedText type="small" style={{ color: theme.accent }} numberOfLines={2}>
               ДЗ · {details.join(' · ')}

@@ -28,6 +28,8 @@ function ThemedRoot() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="lesson" />
+        <Stack.Screen name="add-activity" />
         <Stack.Screen name="homework-entry" />
       </Stack>
     </ThemeProvider>

@@ -21,15 +21,15 @@ export function LessonTypeBadge({ type, highlighted = false }: LessonTypeBadgePr
       style={[
         styles.badge,
         {
-          backgroundColor: highlighted ? theme.background : theme.backgroundSelected,
-          borderColor: highlighted ? theme.accent : 'transparent',
-          borderWidth: highlighted ? 1 : 0,
+          backgroundColor: highlighted ? theme.accent : theme.accentSoft,
+          borderColor: theme.accent,
+          borderWidth: 1,
         },
       ]}>
       <ThemedText
-        type="small"
+        type="smallBold"
         numberOfLines={1}
-        style={[styles.label, highlighted ? { color: theme.accent } : { color: theme.textSecondary }]}>
+        style={[styles.label, { color: highlighted ? theme.background : theme.accent }]}>
         {label}
       </ThemedText>
     </ThemedView>
@@ -38,14 +38,15 @@ export function LessonTypeBadge({ type, highlighted = false }: LessonTypeBadgePr
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     flexShrink: 0,
+    maxWidth: 120,
   },
   label: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '700',
   },
 });

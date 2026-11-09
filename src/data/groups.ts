@@ -1,4 +1,5 @@
 import { LESSONS, SCHEDULE_PERIOD, SCHEDULE_TITLE, type Lesson } from '@/data/schedule-11701126';
+import { getCachedExtraActivities } from '@/lib/extra-activities';
 import { getEffectiveSchedule } from '@/lib/schedule-overrides';
 
 export type GroupId = '11701126' | '11701226' | '11704126';
@@ -42,9 +43,11 @@ export function isGroupId(value: string): value is GroupId {
 export function getGroup(id: string): Group {
   const base = GROUPS.find((group) => group.id === id) ?? GROUPS[0];
   const schedule = getEffectiveSchedule(base.id);
+  const core = schedule.lessons.length > 0 ? schedule.lessons : base.lessons;
+  const extras = getCachedExtraActivities(base.id);
   return {
     ...base,
     specialty: schedule.title || base.specialty,
-    lessons: schedule.lessons.length > 0 ? schedule.lessons : base.lessons,
+    lessons: [...core, ...extras],
   };
 }

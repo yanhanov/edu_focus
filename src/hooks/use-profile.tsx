@@ -12,6 +12,7 @@ import {
   type SubgroupPreference,
   type ThemePreference,
 } from '@/lib/profile';
+import { loadExtraActivities, subscribeExtraActivities } from '@/lib/extra-activities';
 import { loadAllScheduleOverrides, subscribeSchedule } from '@/lib/schedule-overrides';
 import { syncScheduleWidget } from '@/widgets/sync-schedule-widget';
 
@@ -37,12 +38,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [ready, setReady] = useState(false);
   const [scheduleTick, setScheduleTick] = useState(0);
+  const [extraTick, setExtraTick] = useState(0);
 
   useEffect(() => subscribeSchedule(() => setScheduleTick((value) => value + 1)), []);
+  useEffect(() => subscribeExtraActivities(() => setExtraTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
-    void loadAllScheduleOverrides().then(() =>
+    void Promise.all([loadAllScheduleOverrides(), loadExtraActivities()]).then(() =>
       loadProfile().then((next) => {
         if (!cancelled) {
           setProfile(next);
@@ -71,8 +74,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const group = useMemo(() => {
     void scheduleTick;
+    void extraTick;
     return getGroup(profile.groupId);
-  }, [profile.groupId, scheduleTick]);
+  }, [profile.groupId, scheduleTick, extraTick]);
 
   return (
     <ProfileContext.Provider

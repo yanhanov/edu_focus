@@ -209,7 +209,7 @@ export default function HomeworkEntryScreen() {
   }
 
   const lessonDate = parseDate(date);
-  const typeLabel = lesson.type === 'pe' ? 'Физкультура' : LESSON_TYPE_LABELS[lesson.type];
+  const typeLabel = LESSON_TYPE_LABELS[lesson.type];
 
   return (
     <KeyboardAvoidingView

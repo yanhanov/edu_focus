@@ -1,121 +1,138 @@
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs/types';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { memo } from 'react';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
-import { ThemedText } from '@/components/themed-text';
+import { Spacing } from '@/constants/theme';
 import { APP_TABS } from '@/constants/tabs';
 import { useTheme } from '@/hooks/use-theme';
 
-export function CustomTabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
+const COMPACT_WIDTH = 380;
+
+function CustomTabBarInner({ state, navigateToTab, insets }: BottomTabBarProps) {
   const theme = useTheme();
   const { width } = useWindowDimensions();
-  const compact = width < 380;
-  const iconSize = compact ? 20 : 22;
+  const compact = width < COMPACT_WIDTH;
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? Spacing.two : Spacing.three);
 
   return (
     <View
       style={[
         styles.barOuter,
         {
-          paddingBottom: Math.max(insets.bottom, 8),
+          paddingBottom: bottomPad,
           backgroundColor: theme.background,
           borderTopColor: theme.backgroundSelected,
         },
       ]}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const tab = APP_TABS.find((item) => item.name === route.name);
-        if (!tab) {
-          return null;
-        }
+      <View style={styles.tabRow}>
+        {APP_TABS.map((tab) => {
+          const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
+          const route = state.routes[routeIndex];
+          if (!route || routeIndex < 0) {
+            return null;
+          }
+          const focused = state.index === routeIndex;
+          const caption = tab.label;
 
-        return (
-          <Pressable
-            key={route.key}
-            onPress={() => {
-              if (!focused) {
-                navigateToTab(route.key);
-              }
-            }}
-            accessibilityRole="button"
-            accessibilityState={focused ? { selected: true } : {}}
-            accessibilityLabel={tab.label}
-            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
-            <View
-              style={[
-                styles.iconBadge,
-                compact && styles.iconBadgeCompact,
-                focused && { backgroundColor: theme.accentSoft },
+          return (
+            <Pressable
+              key={tab.name}
+              onPress={() => {
+                if (!focused) {
+                  navigateToTab(route.key);
+                }
+              }}
+              accessibilityRole="tab"
+              accessibilityState={focused ? { selected: true } : {}}
+              accessibilityLabel={tab.label}
+              style={({ pressed }) => [
+                styles.tabSlot,
+                pressed && !focused && styles.tabPressed,
               ]}>
-              <AppIcon
-                ios={focused ? tab.icon.ios.selected : tab.icon.ios.default}
-                android={focused ? tab.icon.android.selected : tab.icon.android.default}
-                color={focused ? theme.accent : theme.textSecondary}
-                size={iconSize}
+              <View
+                style={[
+                  styles.iconWrap,
+                  focused && { backgroundColor: theme.accentSoft },
+                ]}>
+                <AppIcon
+                  ios={focused ? tab.icon.ios.selected : tab.icon.ios.default}
+                  android={focused ? tab.icon.android.selected : tab.icon.android.default}
+                  color={focused ? theme.accent : theme.textSecondary}
+                  size={focused ? 24 : 23}
+                />
+              </View>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[
+                  styles.label,
+                  compact && styles.labelCompact,
+                  {
+                    color: focused ? theme.accent : theme.textSecondary,
+                    fontWeight: focused ? '700' : '500',
+                  },
+                ]}>
+                {caption}
+              </Text>
+              <View
+                style={[
+                  styles.indicator,
+                  { backgroundColor: focused ? theme.accent : 'transparent' },
+                ]}
               />
-            </View>
-            <ThemedText
-              type="small"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.82}
-              style={[
-                styles.label,
-                compact && styles.labelCompact,
-                { color: focused ? theme.accent : theme.textSecondary },
-              ]}>
-              {tab.label}
-            </ThemedText>
-          </Pressable>
-        );
-      })}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
+export const CustomTabBar = memo(CustomTabBarInner);
+
 const styles = StyleSheet.create({
   barOuter: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingTop: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    paddingHorizontal: 6,
   },
-  tab: {
+  tabRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: Spacing.one,
+  },
+  tabSlot: {
     flex: 1,
     alignItems: 'center',
-    gap: 3,
-    paddingVertical: 2,
     minWidth: 0,
-    maxWidth: '25%',
+    paddingVertical: Spacing.one,
+    gap: 3,
   },
-  iconBadge: {
-    width: 40,
-    height: 32,
-    borderRadius: 16,
+  tabPressed: {
+    opacity: 0.55,
+  },
+  iconWrap: {
+    width: 44,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconBadgeCompact: {
-    width: 36,
-    height: 28,
-    borderRadius: 14,
   },
   label: {
     fontSize: 11,
     lineHeight: 13,
-    fontWeight: '600',
     textAlign: 'center',
-    width: '100%',
     paddingHorizontal: 2,
+    maxWidth: '100%',
   },
   labelCompact: {
     fontSize: 10,
     lineHeight: 12,
   },
-  pressed: {
-    opacity: 0.65,
+  indicator: {
+    width: 20,
+    height: 3,
+    borderRadius: 2,
+    marginTop: 1,
   },
 });

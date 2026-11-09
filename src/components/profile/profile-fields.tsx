@@ -1,20 +1,27 @@
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch } from 'react-native';
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, Switch, View } from "react-native";
 
-import { AppIcon } from '@/components/app-icon';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AppIcon } from "@/components/app-icon";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import {
   ACCENT_PALETTE_IDS,
   ACCENT_PALETTES,
   type AccentPaletteId,
-} from '@/constants/accent-palettes';
-import { Spacing } from '@/constants/theme';
-import { GROUPS, type GroupId } from '@/data/groups';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useTheme } from '@/hooks/use-theme';
-import { formatReminderTime, reminderTimeOptions } from '@/lib/notifications-config';
-import type { NotificationSettings, SubgroupPreference, ThemePreference } from '@/lib/profile';
+} from "@/constants/accent-palettes";
+import { Spacing } from "@/constants/theme";
+import { GROUPS, type GroupId } from "@/data/groups";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTheme } from "@/hooks/use-theme";
+import {
+  formatReminderTime,
+  reminderTimeOptions,
+} from "@/lib/notifications-config";
+import type {
+  NotificationSettings,
+  SubgroupPreference,
+  ThemePreference,
+} from "@/lib/profile";
 
 type PickerChromeProps = {
   hideTitle?: boolean;
@@ -49,7 +56,11 @@ type GroupPickerProps = PickerChromeProps & {
   onSelect: (groupId: GroupId) => void;
 };
 
-export function GroupPicker({ groupId, onSelect, hideTitle }: GroupPickerProps) {
+export function GroupPicker({
+  groupId,
+  onSelect,
+  hideTitle,
+}: GroupPickerProps) {
   const theme = useTheme();
 
   return (
@@ -66,20 +77,36 @@ export function GroupPicker({ groupId, onSelect, hideTitle }: GroupPickerProps) 
                   index > 0 && styles.groupRowBorder,
                   { borderTopColor: theme.backgroundSelected },
                   selected && { backgroundColor: theme.accentSoft },
-                ]}>
+                ]}
+              >
                 <ThemedView style={styles.groupCopy}>
                   <ThemedText type="smallBold">{item.title}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {item.specialty}
-                    {item.lessons.length === 0 ? ' · расписание скоро' : ''}
+                    {item.lessons.length === 0 ? " · расписание скоро" : ""}
                   </ThemedText>
                 </ThemedView>
                 {selected ? (
-                  <ThemedView style={[styles.checkCircle, { backgroundColor: theme.accent }]}>
-                    <AppIcon ios="checkmark" android="check" color={theme.background} size={14} />
+                  <ThemedView
+                    style={[
+                      styles.checkCircle,
+                      { backgroundColor: theme.accent },
+                    ]}
+                  >
+                    <AppIcon
+                      ios="checkmark"
+                      android="check"
+                      color={theme.background}
+                      size={14}
+                    />
                   </ThemedView>
                 ) : (
-                  <ThemedView style={[styles.checkCircle, { borderColor: theme.backgroundSelected, borderWidth: 2 }]} />
+                  <ThemedView
+                    style={[
+                      styles.checkCircle,
+                      { borderColor: theme.backgroundSelected, borderWidth: 2 },
+                    ]}
+                  />
                 )}
               </ThemedView>
             </Pressable>
@@ -95,13 +122,17 @@ type SubgroupPickerProps = PickerChromeProps & {
   onSelect: (subgroup: SubgroupPreference) => void;
 };
 
-export function SubgroupPicker({ subgroup, onSelect, hideTitle }: SubgroupPickerProps) {
+export function SubgroupPicker({
+  subgroup,
+  onSelect,
+  hideTitle,
+}: SubgroupPickerProps) {
   const theme = useTheme();
 
   const options: { value: SubgroupPreference; label: string }[] = [
-    { value: null, label: 'Вся группа' },
-    { value: 1, label: '1' },
-    { value: 2, label: '2' },
+    { value: null, label: "Вся группа" },
+    { value: 1, label: "1" },
+    { value: 2, label: "2" },
   ];
 
   return (
@@ -112,40 +143,41 @@ export function SubgroupPicker({ subgroup, onSelect, hideTitle }: SubgroupPicker
           Лабораторные другой подгруппы скрываются
         </ThemedText>
       ) : null}
-      <ThemedView type="backgroundElement" style={styles.subgroupCard}>
-        <ThemedView style={styles.segmentRow}>
-          {options.map((option) => {
-            const selected = subgroup === option.value;
-            return (
-              <Pressable
-                key={option.label}
-                onPress={() => onSelect(option.value)}
-                style={({ pressed }) => [
-                  styles.segmentPressable,
-                  pressed && styles.pressed,
+      <ThemedView
+        style={[styles.subgroupTrack, { backgroundColor: theme.backgroundSelected }]}>
+        {options.map((option) => {
+          const selected = subgroup === option.value;
+          return (
+            <Pressable
+              key={option.label}
+              onPress={() => onSelect(option.value)}
+              style={({ pressed }) => [
+                styles.segmentPressable,
+                pressed && styles.pressed,
+              ]}>
+              <View
+                style={[
+                  styles.segmentPill,
+                  selected && {
+                    backgroundColor: theme.accent,
+                    borderColor: theme.accent,
+                  },
                 ]}>
-                <ThemedView
+                <ThemedText
+                  type="smallBold"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
                   style={[
-                    styles.segment,
-                    selected && { backgroundColor: theme.accent },
-                    !selected && { backgroundColor: 'transparent' },
+                    styles.segmentLabel,
+                    selected ? { color: theme.background } : undefined,
                   ]}>
-                  <ThemedText
-                    type="smallBold"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.85}
-                    style={[
-                      styles.segmentLabel,
-                      selected ? { color: theme.background } : undefined,
-                    ]}>
-                    {option.label}
-                  </ThemedText>
-                </ThemedView>
-              </Pressable>
-            );
-          })}
-        </ThemedView>
+                  {option.label}
+                </ThemedText>
+              </View>
+            </Pressable>
+          );
+        })}
       </ThemedView>
     </ThemedView>
   );
@@ -162,9 +194,19 @@ const THEME_OPTIONS: {
   ios: string;
   android: string;
 }[] = [
-  { value: 'system', label: 'Система', ios: 'circle.lefthalf.filled', android: 'contrast' },
-  { value: 'light', label: 'Светлая', ios: 'sun.max.fill', android: 'light_mode' },
-  { value: 'dark', label: 'Тёмная', ios: 'moon.fill', android: 'dark_mode' },
+  {
+    value: "system",
+    label: "Система",
+    ios: "circle.lefthalf.filled",
+    android: "contrast",
+  },
+  {
+    value: "light",
+    label: "Светлая",
+    ios: "sun.max.fill",
+    android: "light_mode",
+  },
+  { value: "dark", label: "Тёмная", ios: "moon.fill", android: "dark_mode" },
 ];
 
 type AccentPalettePickerProps = PickerChromeProps & {
@@ -172,14 +214,20 @@ type AccentPalettePickerProps = PickerChromeProps & {
   onSelect: (palette: AccentPaletteId) => void;
 };
 
-export function AccentPalettePicker({ palette, onSelect, hideTitle }: AccentPalettePickerProps) {
+export function AccentPalettePicker({
+  palette,
+  onSelect,
+  hideTitle,
+}: AccentPalettePickerProps) {
   const colors = useTheme();
   const scheme = useColorScheme();
-  const mode = scheme === 'dark' ? 'dark' : 'light';
+  const mode = scheme === "dark" ? "dark" : "light";
 
   return (
     <ThemedView style={styles.block}>
-      {hideTitle ? null : <ThemedText type="smallBold">Цветовая гамма</ThemedText>}
+      {hideTitle ? null : (
+        <ThemedText type="smallBold">Цветовая гамма</ThemedText>
+      )}
       {!hideTitle ? (
         <ThemedText type="small" themeColor="textSecondary">
           Вкладки, кнопки и выделения — {ACCENT_PALETTE_IDS.length} вариантов
@@ -193,22 +241,51 @@ export function AccentPalettePicker({ palette, onSelect, hideTitle }: AccentPale
             <Pressable
               key={id}
               onPress={() => onSelect(id)}
-              style={({ pressed }) => [styles.paletteTile, pressed && styles.pressed]}>
+              style={({ pressed }) => [
+                styles.paletteTile,
+                pressed && styles.pressed,
+              ]}
+            >
               <ThemedView
                 type="backgroundElement"
                 style={[
                   styles.paletteTileInner,
                   selected && { borderColor: pair.accent, borderWidth: 2 },
-                ]}>
-                <ThemedView style={[styles.paletteSwatch, { backgroundColor: pair.accent }]}>
-                  <ThemedView style={[styles.paletteSwatchSoft, { backgroundColor: pair.accentSoft }]} />
+                ]}
+              >
+                <ThemedView
+                  style={[
+                    styles.paletteSwatch,
+                    { backgroundColor: pair.accent },
+                  ]}
+                >
+                  <ThemedView
+                    style={[
+                      styles.paletteSwatchSoft,
+                      { backgroundColor: pair.accentSoft },
+                    ]}
+                  />
                 </ThemedView>
-                <ThemedText type="smallBold" style={styles.paletteLabel} numberOfLines={1}>
+                <ThemedText
+                  type="smallBold"
+                  style={styles.paletteLabel}
+                  numberOfLines={1}
+                >
                   {ACCENT_PALETTES[id].label}
                 </ThemedText>
                 {selected ? (
-                  <ThemedView style={[styles.paletteCheck, { backgroundColor: colors.accent }]}>
-                    <AppIcon ios="checkmark" android="check" color={colors.background} size={10} />
+                  <ThemedView
+                    style={[
+                      styles.paletteCheck,
+                      { backgroundColor: colors.accent },
+                    ]}
+                  >
+                    <AppIcon
+                      ios="checkmark"
+                      android="check"
+                      color={colors.background}
+                      size={10}
+                    />
                   </ThemedView>
                 ) : null}
               </ThemedView>
@@ -233,15 +310,34 @@ export function ThemePicker({ theme, onSelect, hideTitle }: ThemePickerProps) {
             <Pressable
               key={option.value}
               onPress={() => onSelect(option.value)}
-              style={({ pressed }) => [styles.themeTile, pressed && styles.pressed]}>
+              style={({ pressed }) => [
+                styles.themeTile,
+                pressed && styles.pressed,
+              ]}
+            >
               <ThemedView
                 type="backgroundElement"
                 style={[
                   styles.themeTileInner,
-                  selected && { backgroundColor: colors.accentSoft, borderColor: colors.accent, borderWidth: 1 },
-                ]}>
-                <ThemedView style={[styles.themeIcon, { backgroundColor: colors.backgroundSelected }]}>
-                  <AppIcon ios={option.ios} android={option.android} color={colors.accent} size={20} />
+                  selected && {
+                    backgroundColor: colors.background,
+                    borderColor: colors.accent,
+                    borderWidth: 1.5,
+                  },
+                ]}
+              >
+                <ThemedView
+                  style={[
+                    styles.themeIcon,
+                    { backgroundColor: colors.backgroundSelected },
+                  ]}
+                >
+                  <AppIcon
+                    ios={option.ios}
+                    android={option.android}
+                    color={colors.accent}
+                    size={20}
+                  />
                 </ThemedView>
                 <ThemedText type="smallBold">{option.label}</ThemedText>
               </ThemedView>
@@ -261,7 +357,12 @@ type NotificationPickerProps = {
   compact?: boolean;
 };
 
-export function NotificationPicker({ settings, onChange, hideTitle, compact }: NotificationPickerProps) {
+export function NotificationPicker({
+  settings,
+  onChange,
+  hideTitle,
+  compact,
+}: NotificationPickerProps) {
   const theme = useTheme();
   const timeLabel = formatReminderTime(settings);
   const timeOptions = reminderTimeOptions(settings);
@@ -272,16 +373,33 @@ export function NotificationPicker({ settings, onChange, hideTitle, compact }: N
       <ThemedView type="backgroundElement" style={styles.notificationCard}>
         {compact ? (
           <ThemedText type="small" themeColor="textSecondary">
-            {settings.enabled ? `Сейчас: в ${timeLabel}` : 'Сейчас: выключены'}
+            {settings.enabled ? `Сейчас: в ${timeLabel}` : "Сейчас: выключены"}
           </ThemedText>
         ) : (
-          <ThemedView style={[styles.notificationHero, { backgroundColor: theme.accentSoft }]}>
-            <ThemedView style={[styles.notificationIcon, { backgroundColor: theme.background }]}>
-              <AppIcon ios="bell.badge.fill" android="notifications" color={theme.accent} size={22} />
+          <ThemedView
+            style={[
+              styles.notificationHero,
+              { backgroundColor: theme.accentSoft },
+            ]}
+          >
+            <ThemedView
+              style={[
+                styles.notificationIcon,
+                { backgroundColor: theme.background },
+              ]}
+            >
+              <AppIcon
+                ios="bell.badge.fill"
+                android="notifications"
+                color={theme.accent}
+                size={22}
+              />
             </ThemedView>
             <ThemedView style={styles.notificationHeroCopy}>
               <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                {settings.enabled ? `Напоминания в ${timeLabel}` : 'Напоминания выключены'}
+                {settings.enabled
+                  ? `Напоминания в ${timeLabel}`
+                  : "Напоминания выключены"}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 Вечером накануне пары, если ДЗ записано
@@ -295,23 +413,34 @@ export function NotificationPicker({ settings, onChange, hideTitle, compact }: N
           <Switch
             value={settings.enabled}
             onValueChange={(enabled) => onChange({ ...settings, enabled })}
-            trackColor={{ false: theme.backgroundSelected, true: theme.accentSoft }}
+            trackColor={{
+              false: theme.backgroundSelected,
+              true: theme.accentSoft,
+            }}
             thumbColor={settings.enabled ? theme.accent : theme.textSecondary}
           />
         </ThemedView>
 
         <ThemedView style={styles.timeSection}>
           <ThemedText type="smallBold">Время</ThemedText>
-          <ThemedView style={styles.row}>
+          <ThemedView
+            style={[styles.timeTrack, { backgroundColor: theme.backgroundSelected }]}>
             {timeOptions.map((preset) => {
-              const selected = settings.hour === preset.hour && settings.minute === preset.minute;
+              const selected =
+                settings.hour === preset.hour &&
+                settings.minute === preset.minute;
               return (
                 <Chip
                   key={`${preset.hour}:${preset.minute}`}
                   label={preset.label}
                   selected={selected}
+                  flex
                   onPress={() =>
-                    onChange({ ...settings, hour: preset.hour, minute: preset.minute })
+                    onChange({
+                      ...settings,
+                      hour: preset.hour,
+                      minute: preset.minute,
+                    })
                   }
                 />
               );
@@ -338,18 +467,22 @@ function Chip({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [flex && styles.chipFlex, pressed && styles.pressed]}>
-      <ThemedView
-        type={selected ? 'backgroundSelected' : 'backgroundElement'}
+      style={({ pressed }) => [
+        flex && styles.chipFlex,
+        pressed && styles.pressed,
+      ]}>
+      <View
         style={[
           styles.chip,
           flex && styles.chipFlex,
           selected && { backgroundColor: theme.accent },
         ]}>
-        <ThemedText type="smallBold" style={selected ? { color: theme.background } : undefined}>
+        <ThemedText
+          type="smallBold"
+          style={selected ? { color: theme.background } : undefined}>
           {label}
         </ThemedText>
-      </ThemedView>
+      </View>
     </Pressable>
   );
 }
@@ -357,32 +490,32 @@ function Chip({
 const styles = StyleSheet.create({
   section: {
     gap: Spacing.two,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   sectionHead: {
     gap: 2,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   block: {
     gap: Spacing.two,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.two,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   groupList: {
     borderRadius: Spacing.three,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   groupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.three,
     padding: Spacing.three,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   groupRowBorder: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -390,58 +523,68 @@ const styles = StyleSheet.create({
   groupCopy: {
     flex: 1,
     gap: Spacing.one,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   checkCircle: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   chipCard: {
     padding: Spacing.two,
     borderRadius: Spacing.three,
   },
-  subgroupCard: {
-    padding: Spacing.half + 2,
-    borderRadius: Spacing.three,
-  },
-  segmentRow: {
+  subgroupTrack: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'stretch',
-    gap: Spacing.one,
-    backgroundColor: 'transparent',
+    padding: 3,
+    borderRadius: Spacing.four,
+    overflow: 'hidden',
   },
   segmentPressable: {
     flex: 1,
     minWidth: 0,
   },
-  segment: {
+  segmentPill: {
     flex: 1,
     minHeight: 44,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.two,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.two + 2,
+    borderRadius: Spacing.three,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   segmentLabel: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 14,
     lineHeight: 18,
   },
   chip: {
-    minWidth: 72,
-    paddingHorizontal: Spacing.three,
+    minHeight: 42,
+    paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
+    borderRadius: Spacing.three + 2,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   chipFlex: {
     flex: 1,
     minWidth: 0,
+  },
+  timeTrack: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'stretch',
+    padding: 3,
+    borderRadius: Spacing.four,
+    overflow: 'hidden',
   },
   themeTile: {
     flex: 1,
@@ -450,39 +593,39 @@ const styles = StyleSheet.create({
   themeTileInner: {
     padding: Spacing.three,
     borderRadius: Spacing.three,
-    alignItems: 'center',
+    alignItems: "center",
     gap: Spacing.two,
   },
   themeIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   paletteGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.two,
   },
   paletteTile: {
-    width: '31%',
+    width: "31%",
     minWidth: 96,
     flexGrow: 1,
   },
   paletteTileInner: {
     padding: Spacing.two,
     borderRadius: Spacing.three,
-    alignItems: 'center',
+    alignItems: "center",
     gap: Spacing.one,
-    position: 'relative',
+    position: "relative",
   },
   paletteSwatch: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   paletteSwatchSoft: {
     width: 22,
@@ -491,24 +634,24 @@ const styles = StyleSheet.create({
   },
   paletteLabel: {
     fontSize: 11,
-    textAlign: 'center',
+    textAlign: "center",
   },
   paletteCheck: {
-    position: 'absolute',
+    position: "absolute",
     top: Spacing.two,
     right: Spacing.two,
     width: 20,
     height: 20,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: Spacing.three,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   notificationCard: {
     padding: Spacing.three,
@@ -516,8 +659,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   notificationHero: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Spacing.three,
@@ -526,17 +669,17 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   notificationHeroCopy: {
     flex: 1,
     gap: Spacing.one,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   timeSection: {
     gap: Spacing.two,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   pressed: {
     opacity: 0.7,
