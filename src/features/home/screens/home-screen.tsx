@@ -15,6 +15,14 @@ import { useNow } from '@/shared/hooks/use-now';
 import { useProfile } from '@/features/profile/hooks/use-profile';
 import { useTheme } from '@/shared/hooks/use-theme';
 import {
+  formatLessonTimes,
+  homeworkRowTimeColumn,
+  groupHomeworkStatus,
+  groupHomeworkTodoCount,
+  groupLessonsBySubject,
+  pickHomeworkEntryForLessons,
+} from '@/features/homework/lib/homework-subject';
+import {
   homeworkCompletionStatus,
   homeworkKey,
   setHomeworkDone,
@@ -59,10 +67,8 @@ export default function HomeScreen() {
         : undefined;
   const todayIso = toIsoDate(now);
   const nowMinutes = currentMinutes(now);
-  const pendingHomeworkCount = todayLessons.filter((lesson) => {
-    const status = homeworkCompletionStatus(homeworkMap[homeworkKey(todayIso, lesson.id)]);
-    return status === 'todo';
-  }).length;
+  const todaySubjectGroups = groupLessonsBySubject(todayLessons);
+  const pendingHomeworkCount = groupHomeworkTodoCount(todayIso, todayLessons, homeworkMap);
   const doneToday = todayLessons.filter((lesson) => minutesFromMidnight(lesson.end) <= nowMinutes).length;
 
   useEffect(() => {
@@ -160,14 +166,14 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
           ) : (
-            todayLessons.map((lesson, index) => (
+            todaySubjectGroups.map((group, index) => (
               <LessonTimelineRow
-                key={lesson.id}
-                lesson={lesson}
+                key={group.key}
+                lessons={group.lessons}
                 date={todayIso}
                 status={nowStatus}
                 nowMinutes={nowMinutes}
-                prevLesson={index > 0 ? todayLessons[index - 1] : undefined}
+                prevGroup={index > 0 ? todaySubjectGroups[index - 1] : undefined}
                 homeworkMap={homeworkMap}
               />
             ))
@@ -267,38 +273,44 @@ function SectionHeader({
 }
 
 function LessonTimelineRow({
-  lesson,
+  lessons,
   date,
   status,
   nowMinutes,
-  prevLesson,
+  prevGroup,
   homeworkMap,
 }: {
-  lesson: Lesson;
+  lessons: Lesson[];
   date: string;
   status: NowStatus;
   nowMinutes: number;
-  prevLesson?: Lesson;
+  prevGroup?: { lessons: Lesson[] };
   homeworkMap: HomeworkMap;
 }) {
   const theme = useTheme();
-  const isNow = status.kind === 'now' && status.lesson.id === lesson.id;
-  const isPast = minutesFromMidnight(lesson.end) <= nowMinutes;
+  const lesson = lessons[0]!;
+  const lastLesson = lessons[lessons.length - 1]!;
+  const lessonIds = new Set(lessons.map((item) => item.id));
+  const isNow = status.kind === 'now' && lessonIds.has(status.lesson.id);
+  const isPast = minutesFromMidnight(lastLesson.end) <= nowMinutes;
   const isNext =
-    (status.kind === 'upcoming' || status.kind === 'break') && status.next.id === lesson.id;
-  const entry = homeworkMap[homeworkKey(date, lesson.id)];
-  const hwStatus = homeworkCompletionStatus(entry);
+    (status.kind === 'upcoming' || status.kind === 'break') && lessonIds.has(status.next.id);
+  const entry = pickHomeworkEntryForLessons(date, lessons, homeworkMap);
+  const hwStatus = groupHomeworkStatus(date, lessons, homeworkMap);
   const summary = homeworkSummary(entry);
-  const prevStatus = prevLesson
-    ? homeworkCompletionStatus(homeworkMap[homeworkKey(date, prevLesson.id)])
+  const prevStatus = prevGroup
+    ? groupHomeworkStatus(date, prevGroup.lessons, homeworkMap)
     : 'none';
+  const openLessonId = entry?.lessonId ?? lesson.id;
+  const { start: timeStart, end: timeEnd } = homeworkRowTimeColumn(lessons);
+  const slotTimes = lessons.length > 1 ? formatLessonTimes(lessons) : null;
 
   return (
     <Pressable
       onPress={() =>
         router.push({
           pathname: '/lesson',
-          params: { lessonId: lesson.id, date },
+          params: { lessonId: openLessonId, date },
         })
       }
       style={({ pressed }) => pressed && styles.pressed}>
@@ -315,10 +327,10 @@ function LessonTimelineRow({
             type="smallBold"
             themeColor={isPast && !isNow ? 'textSecondary' : undefined}
             style={isNow ? { color: theme.accent } : undefined}>
-            {lesson.start}
+            {timeStart}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {lesson.end}
+            {timeEnd}
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.lessonBody}>
@@ -335,6 +347,11 @@ function LessonTimelineRow({
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {formatPlace(lesson)}
           </ThemedText>
+          {slotTimes ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+              {slotTimes}
+            </ThemedText>
+          ) : null}
           {prevStatus !== 'none' ? (
             <HomeworkStatusChip status={prevStatus} compact prefix="К след. паре" />
           ) : null}
@@ -348,7 +365,13 @@ function LessonTimelineRow({
               status={hwStatus === 'done' ? 'done' : 'todo'}
               compact
               onToggle={() => {
-                void setHomeworkDone(date, lesson.id, hwStatus !== 'done');
+                const nextDone = hwStatus !== 'done';
+                for (const item of lessons) {
+                  const itemStatus = homeworkCompletionStatus(homeworkMap[homeworkKey(date, item.id)]);
+                  if (itemStatus !== 'none') {
+                    void setHomeworkDone(date, item.id, nextDone);
+                  }
+                }
               }}
             />
           ) : null}

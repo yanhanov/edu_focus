@@ -1,24 +1,32 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useMemo } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/shared/ui/app-icon';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { ThemedView } from '@/shared/ui/themed-view';
+import {
+  SubjectSearchBar,
+  SubjectSearchToggle,
+  useSubjectSearch,
+} from '@/shared/ui/subject-search';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/shared/theme/theme';
-import { homeworkSummary, useHomeworkMap } from '@/features/homework/hooks/use-homework';
+import { useHomeworkMap } from '@/features/homework/hooks/use-homework';
+import { HomeworkRow } from '@/features/homework/components/homework-row';
+import { HomeworkWeekSearchSection } from '@/features/homework/components/homework-week-search-section';
 import { useNow } from '@/shared/hooks/use-now';
 import { useProfile } from '@/features/profile/hooks/use-profile';
 import { useTheme } from '@/shared/hooks/use-theme';
-import { HomeworkStatusChip } from '@/features/homework/components/homework-status-chip';
-import { LessonTypeBadge } from '@/features/schedule/components/lesson-type-badge';
 import {
-  homeworkCompletionStatus,
-  listHomeworkEntries,
-  setHomeworkDone,
-  type HomeworkEntry,
-} from '@/features/homework/lib/homework';
+  dedupeHomeworkEntriesBySubject,
+  groupLessonsBySubject,
+  subjectMatchesQuery,
+} from '@/features/homework/lib/homework-subject';
+import { listHomeworkEntries, type HomeworkEntry } from '@/features/homework/lib/homework';
+import {
+  getMatchingLessonsForWeek,
+  isIsoInStudyWeek,
+} from '@/features/schedule/lib/week-search';
 import {
   addDays,
   formatDate,
@@ -28,7 +36,6 @@ import {
   toIsoDate,
   WEEKDAY_SHORT,
 } from '@/features/schedule/lib/schedule';
-import type { Lesson } from '@/features/schedule/data/schedule-11701126';
 
 function parseDate(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number);
@@ -46,30 +53,57 @@ function dateHeading(iso: string, todayIso: string): string {
   return `${WEEKDAY_SHORT[getWeekday(date)]} · ${formatDate(date)}`;
 }
 
-function openLesson(lessonId: string, date: string) {
-  router.push({
-    pathname: '/lesson',
-    params: { lessonId, date },
-  });
-}
-
 export default function HomeworkListScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const now = useNow();
   const { group, profile } = useProfile();
   const homeworkMap = useHomeworkMap();
+  const search = useSubjectSearch();
   const todayIso = toIsoDate(now);
+  const weekSearchActive = search.query.trim().length > 0;
   const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
-  const saved = listHomeworkEntries(homeworkMap).filter((item) =>
-    Boolean(getLessonById(item.lessonId, group.lessons))
+  const todayGroups = useMemo(
+    () => groupLessonsBySubject(todayLessons),
+    [todayLessons],
   );
-  const earlier = saved.filter((item) => item.date !== todayIso);
-  const earlierGroups = groupByDate(earlier);
+  const weekSearchHitCount = useMemo(() => {
+    if (!weekSearchActive) {
+      return 0;
+    }
+    return getMatchingLessonsForWeek(now, group.lessons, profile.subgroup, search.query).length;
+  }, [weekSearchActive, now, group.lessons, profile.subgroup, search.query]);
+  const saved = listHomeworkEntries(homeworkMap).filter((item) =>
+    Boolean(getLessonById(item.lessonId, group.lessons)),
+  );
+  const earlier = saved.filter((item) => {
+    if (item.date === todayIso) {
+      return false;
+    }
+    if (weekSearchActive && isIsoInStudyWeek(item.date, now)) {
+      return false;
+    }
+    return true;
+  });
+  const earlierGroups = useMemo(() => {
+    const byDate = groupByDate(earlier);
+    return byDate
+      .map((bucket) => ({
+        date: bucket.date,
+        rows: dedupeHomeworkEntriesBySubject(bucket.items, (lessonId) =>
+          getLessonById(lessonId, group.lessons),
+        ).filter((row) => !weekSearchActive || subjectMatchesQuery(row.lessons[0]!, search.query)),
+      }))
+      .filter((bucket) => bucket.rows.length > 0);
+  }, [earlier, group.lessons, search.query, weekSearchActive]);
+
+  const showEmptySearch =
+    weekSearchActive && weekSearchHitCount === 0 && earlierGroups.length === 0;
 
   return (
     <ThemedView style={styles.screen}>
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           {
@@ -78,51 +112,88 @@ export default function HomeworkListScreen() {
           },
         ]}>
         <ThemedView style={styles.header}>
-          <ThemedText type="small" themeColor="textSecondary">
-            {formatDate(now)}
-          </ThemedText>
-          <ThemedText type="subtitle">ДЗ</ThemedText>
+          <ThemedView style={styles.headerTop}>
+            <ThemedView style={styles.headerCopy}>
+              <ThemedText type="small" themeColor="textSecondary">
+                {formatDate(now)}
+              </ThemedText>
+              <ThemedText type="subtitle">ДЗ</ThemedText>
+            </ThemedView>
+            <SubjectSearchToggle
+              active={search.active}
+              onPress={() => (search.open ? search.closeSearch() : search.openSearch())}
+            />
+          </ThemedView>
         </ThemedView>
 
-        {todayLessons.length > 0 ? (
+        {search.open ? (
+          <SubjectSearchBar
+            query={search.query}
+            onChangeQuery={search.setQuery}
+            onClose={search.closeSearch}
+          />
+        ) : null}
+
+        {weekSearchActive ? (
+          <HomeworkWeekSearchSection
+            now={now}
+            query={search.query}
+            allLessons={group.lessons}
+            subgroup={profile.subgroup}
+            homeworkMap={homeworkMap}
+          />
+        ) : todayGroups.length > 0 ? (
           <ThemedView style={styles.block}>
             <ThemedText type="smallBold">Сегодняшние пары</ThemedText>
-            {todayLessons.map((lesson) => (
+            {todayGroups.map((item) => (
               <HomeworkRow
-                key={lesson.id}
-                lesson={lesson}
+                key={item.key}
+                lessons={item.lessons}
                 date={todayIso}
-                entry={homeworkMap[`${todayIso}:${lesson.id}`]}
+                homeworkMap={homeworkMap}
                 emptyLabel="Добавить"
               />
             ))}
           </ThemedView>
         ) : null}
 
-        {earlierGroups.map((groupItems) => (
-          <ThemedView key={groupItems.date} style={styles.block}>
-            <ThemedText type="smallBold">{dateHeading(groupItems.date, todayIso)}</ThemedText>
-            {groupItems.items.map((item) => {
-              const lesson = getLessonById(item.lessonId, group.lessons);
-              if (!lesson) {
-                return null;
-              }
-              return (
-                <HomeworkRow
-                  key={`${item.date}:${item.lessonId}`}
-                  lesson={lesson}
-                  date={item.date}
-                  entry={item}
-                />
-              );
-            })}
+        {earlierGroups.length > 0 ? (
+          <ThemedView style={styles.block}>
+            {weekSearchActive ? (
+              <ThemedText type="smallBold">Сохранённые задания</ThemedText>
+            ) : null}
+            {earlierGroups.map((groupItems) => (
+              <ThemedView key={groupItems.date} style={styles.dateBucket}>
+                <ThemedText type="smallBold">{dateHeading(groupItems.date, todayIso)}</ThemedText>
+                {groupItems.rows.map((row) => (
+                  <HomeworkRow
+                    key={row.key}
+                    lessons={row.lessons}
+                    date={row.date}
+                    homeworkMap={homeworkMap}
+                    entry={row.entry}
+                  />
+                ))}
+              </ThemedView>
+            ))}
           </ThemedView>
-        ))}
+        ) : null}
 
-        {todayLessons.length === 0 && earlier.length === 0 ? (
+        {showEmptySearch ? (
           <ThemedView type="backgroundElement" style={styles.empty}>
-            <ThemedView
-              style={[styles.emptyIcon, { backgroundColor: theme.accentSoft }]}>
+            <ThemedText type="smallBold">Ничего не найдено</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Нет пар и сохранённых заданий по этому запросу
+            </ThemedText>
+          </ThemedView>
+        ) : null}
+
+        {!showEmptySearch &&
+        !weekSearchActive &&
+        todayGroups.length === 0 &&
+        earlierGroups.length === 0 ? (
+          <ThemedView type="backgroundElement" style={styles.empty}>
+            <ThemedView style={[styles.emptyIcon, { backgroundColor: theme.accentSoft }]}>
               <AppIcon ios="note.text" android="edit_note" color={theme.accent} size={28} />
             </ThemedView>
             <ThemedText type="smallBold">Пока нет заданий</ThemedText>
@@ -133,89 +204,6 @@ export default function HomeworkListScreen() {
         ) : null}
       </ScrollView>
     </ThemedView>
-  );
-}
-
-function HomeworkRow({
-  lesson,
-  date,
-  entry,
-  emptyLabel,
-}: {
-  lesson: Lesson;
-  date: string;
-  entry?: HomeworkEntry;
-  emptyLabel?: string;
-}) {
-  const theme = useTheme();
-  const summary = homeworkSummary(entry);
-  const photos = entry?.photos.slice(0, 3) ?? [];
-  const completion = homeworkCompletionStatus(entry);
-
-  return (
-    <Pressable
-      onPress={() => openLesson(lesson.id, date)}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedView style={styles.timeCol}>
-          <ThemedText type="smallBold">{lesson.start}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {lesson.end}
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.body}>
-          <ThemedView style={styles.subjectRow}>
-            <ThemedText type="smallBold" style={styles.subjectTitle}>
-              {lesson.subject}
-            </ThemedText>
-            <LessonTypeBadge type={lesson.type} />
-            {completion !== 'none' ? (
-              <HomeworkStatusChip
-                status={completion === 'done' ? 'done' : 'todo'}
-                compact
-                onToggle={() => {
-                  void setHomeworkDone(date, lesson.id, completion !== 'done');
-                }}
-              />
-            ) : null}
-          </ThemedView>
-          {summary.hasContent ? (
-            <>
-              {summary.text ? (
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                  {summary.text}
-                </ThemedText>
-              ) : null}
-              {photos.length > 0 ? (
-                <ThemedView style={styles.thumbs}>
-                  {photos.map((photo) => (
-                    <Image key={photo.id} source={{ uri: photo.uri }} style={styles.thumb} />
-                  ))}
-                  {summary.photoCount > photos.length ? (
-                    <ThemedView type="backgroundSelected" style={styles.moreThumb}>
-                      <ThemedText type="smallBold">+{summary.photoCount - photos.length}</ThemedText>
-                    </ThemedView>
-                  ) : null}
-                </ThemedView>
-              ) : null}
-              {summary.linkCount > 0 ? (
-                <ThemedText type="small" style={{ color: theme.accent }}>
-                  {summary.linkCount === 1 ? '1 ссылка' : `ссылок: ${summary.linkCount}`}
-                </ThemedText>
-              ) : null}
-            </>
-          ) : (
-            <ThemedView style={styles.addRow}>
-              <AppIcon ios="plus" android="add" color={theme.accent} size={16} />
-              <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                {emptyLabel ?? 'Открыть'}
-              </ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-      </ThemedView>
-    </Pressable>
   );
 }
 
@@ -246,57 +234,25 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.one,
   },
-  block: {
-    gap: Spacing.two,
-  },
-  card: {
+  headerTop: {
     flexDirection: 'row',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  timeCol: {
-    minWidth: 52,
-    gap: 2,
-    backgroundColor: 'transparent',
-  },
-  body: {
-    flex: 1,
-    gap: Spacing.one,
-    backgroundColor: 'transparent',
-  },
-  subjectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: Spacing.two,
     backgroundColor: 'transparent',
   },
-  subjectTitle: {
+  headerCopy: {
     flex: 1,
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.one,
     backgroundColor: 'transparent',
   },
-  thumbs: {
-    flexDirection: 'row',
-    gap: Spacing.one,
+  block: {
+    gap: Spacing.two,
     backgroundColor: 'transparent',
   },
-  thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: Spacing.two,
-  },
-  moreThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
+  dateBucket: {
+    gap: Spacing.two,
+    backgroundColor: 'transparent',
   },
   empty: {
     padding: Spacing.four,
@@ -310,8 +266,5 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

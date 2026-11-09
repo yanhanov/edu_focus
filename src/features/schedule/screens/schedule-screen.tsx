@@ -12,8 +12,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DaySwitcher } from '@/features/schedule/components/day-switcher';
 import { ScheduleAddButton } from '@/features/schedule/components/schedule-add-button';
 import { ScheduleDayPanel } from '@/features/schedule/components/schedule-day-panel';
+import { ScheduleWeekSearchPanel } from '@/features/schedule/components/schedule-week-search-panel';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { ThemedView } from '@/shared/ui/themed-view';
+import {
+  SubjectSearchBar,
+  SubjectSearchToggle,
+  useSubjectSearch,
+} from '@/shared/ui/subject-search';
 import { MaxContentWidth, Spacing } from '@/shared/theme/theme';
 import { SCHEDULE_PERIOD } from '@/features/schedule/data/groups';
 import { useHomeworkMap } from '@/features/homework/hooks/use-homework';
@@ -36,6 +42,7 @@ import { syncScheduleWidget } from '@/widgets/sync-schedule-widget';
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const { width: pageWidth } = useWindowDimensions();
+  const search = useSubjectSearch();
   const now = useNow();
   const { group, profile } = useProfile();
   const homeworkMap = useHomeworkMap();
@@ -93,6 +100,7 @@ export default function ScheduleScreen() {
   }, []);
 
   const initialIndex = STUDY_WEEKDAYS.indexOf(initialDay);
+  const weekSearchActive = search.query.trim().length > 0;
 
   return (
     <ThemedView style={styles.screen}>
@@ -113,6 +121,10 @@ export default function ScheduleScreen() {
                 {weekLabel}
               </ThemedText>
             </ThemedView>
+            <SubjectSearchToggle
+              active={search.active}
+              onPress={() => (search.open ? search.closeSearch() : search.openSearch())}
+            />
             <ScheduleAddButton
               onPress={() =>
                 router.push({
@@ -127,44 +139,70 @@ export default function ScheduleScreen() {
           </ThemedText>
         </ThemedView>
 
-        <DaySwitcher selected={selectedDay} today={todayWeekday} onSelect={onSelectDay} />
+        {weekSearchActive ? null : (
+          <DaySwitcher selected={selectedDay} today={todayWeekday} onSelect={onSelectDay} />
+        )}
+
+        {search.open ? (
+          <ThemedView style={styles.searchWrap}>
+            <SubjectSearchBar
+              query={search.query}
+              onChangeQuery={search.setQuery}
+              onClose={search.closeSearch}
+            />
+          </ThemedView>
+        ) : null}
       </ThemedView>
 
-      <FlatList
-        ref={pagerRef}
-        data={STUDY_WEEKDAYS}
-        horizontal
-        pagingEnabled
-        bounces={false}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(day) => String(day)}
-        initialScrollIndex={initialIndex >= 0 ? initialIndex : 0}
-        getItemLayout={(_, index) => ({
-          length: pageWidth,
-          offset: pageWidth * index,
-          index,
-        })}
-        onMomentumScrollEnd={onPagerScrollEnd}
-        onScrollToIndexFailed={({ index }) => {
-          pagerRef.current?.scrollToOffset({ offset: pageWidth * index, animated: false });
-        }}
-        renderItem={({ item: day }) => (
-          <ScheduleDayPanel
-            day={day}
-            now={now}
-            todayWeekday={todayWeekday}
-            group={group}
-            subgroup={profile.subgroup}
-            homeworkMap={homeworkMap}
-            pageWidth={pageWidth}
-            bottomInset={insets.bottom}
-            currentLessonId={currentLessonId}
-            onOpenHomework={openLesson}
-          />
-        )}
-        style={styles.pager}
-      />
+      {weekSearchActive ? (
+        <ScheduleWeekSearchPanel
+          now={now}
+          query={search.query}
+          group={group}
+          subgroup={profile.subgroup}
+          homeworkMap={homeworkMap}
+          bottomInset={insets.bottom}
+          todayWeekday={todayWeekday}
+          currentLessonId={currentLessonId}
+          onOpenLesson={openLesson}
+        />
+      ) : (
+        <FlatList
+          ref={pagerRef}
+          data={STUDY_WEEKDAYS}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(day) => String(day)}
+          initialScrollIndex={initialIndex >= 0 ? initialIndex : 0}
+          getItemLayout={(_, index) => ({
+            length: pageWidth,
+            offset: pageWidth * index,
+            index,
+          })}
+          onMomentumScrollEnd={onPagerScrollEnd}
+          onScrollToIndexFailed={({ index }) => {
+            pagerRef.current?.scrollToOffset({ offset: pageWidth * index, animated: false });
+          }}
+          renderItem={({ item: day }) => (
+            <ScheduleDayPanel
+              day={day}
+              now={now}
+              todayWeekday={todayWeekday}
+              group={group}
+              subgroup={profile.subgroup}
+              homeworkMap={homeworkMap}
+              pageWidth={pageWidth}
+              bottomInset={insets.bottom}
+              currentLessonId={currentLessonId}
+              onOpenHomework={openLesson}
+            />
+          )}
+          style={styles.pager}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -192,6 +230,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.one,
     backgroundColor: 'transparent',
+  },
+  searchWrap: {
+    paddingHorizontal: Spacing.four,
   },
   pager: {
     flex: 1,
