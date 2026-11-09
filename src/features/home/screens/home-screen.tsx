@@ -35,6 +35,7 @@ import {
   formatDate,
   formatPlace,
   getLessonsForDate,
+  getPublicHolidayOnDate,
   getNowStatus,
   getWeekParity,
   getWeekday,
@@ -57,8 +58,9 @@ export default function HomeScreen() {
   const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
   const tomorrow = addDays(now, 1);
   const tomorrowLessons = getLessonsForDate(tomorrow, group.lessons, profile.subgroup);
+  const todayHoliday = getPublicHolidayOnDate(now);
   const nowStatus = getNowStatus(todayLessons, now);
-  const statusCopy = describeNowStatus(nowStatus, weekday);
+  const statusCopy = describeNowStatus(nowStatus, weekday, todayHoliday?.localName);
   const currentLesson =
     nowStatus.kind === 'now'
       ? nowStatus.lesson

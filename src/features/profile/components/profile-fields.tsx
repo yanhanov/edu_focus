@@ -17,10 +17,12 @@ import {
   formatReminderTime,
   reminderTimeOptions,
 } from "@/features/notifications/lib/notifications-config";
-import type {
-  NotificationSettings,
-  SubgroupPreference,
-  ThemePreference,
+import {
+  HOLIDAY_REGION_LABELS,
+  type HolidayRegion,
+  type NotificationSettings,
+  type SubgroupPreference,
+  type ThemePreference,
 } from "@/features/profile/lib/profile";
 
 type PickerChromeProps = {
@@ -173,6 +175,72 @@ export function SubgroupPicker({
                     selected ? { color: theme.background } : undefined,
                   ]}>
                   {option.label}
+                </ThemedText>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ThemedView>
+    </ThemedView>
+  );
+}
+
+type HolidayRegionPickerProps = PickerChromeProps & {
+  region: HolidayRegion;
+  onSelect: (region: HolidayRegion) => void;
+};
+
+const HOLIDAY_REGION_OPTIONS: HolidayRegion[] = ["BY", "none"];
+
+export function HolidayRegionPicker({
+  region,
+  onSelect,
+  hideTitle,
+}: HolidayRegionPickerProps) {
+  const theme = useTheme();
+
+  return (
+    <ThemedView style={styles.block}>
+      {hideTitle ? null : <ThemedText type="smallBold">Гос. праздники</ThemedText>}
+      {!hideTitle ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Календарь по стране (date.nager.at), в эти дни пары скрываются
+        </ThemedText>
+      ) : null}
+      <ThemedView
+        style={[styles.subgroupTrack, { backgroundColor: theme.backgroundSelected }]}
+      >
+        {HOLIDAY_REGION_OPTIONS.map((option) => {
+          const selected = region === option;
+          return (
+            <Pressable
+              key={option}
+              onPress={() => onSelect(option)}
+              style={({ pressed }) => [
+                styles.segmentPressable,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.segmentPill,
+                  selected && {
+                    backgroundColor: theme.accent,
+                    borderColor: theme.accent,
+                  },
+                ]}
+              >
+                <ThemedText
+                  type="smallBold"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  style={[
+                    styles.segmentLabel,
+                    selected ? { color: theme.background } : undefined,
+                  ]}
+                >
+                  {HOLIDAY_REGION_LABELS[option]}
                 </ThemedText>
               </View>
             </Pressable>

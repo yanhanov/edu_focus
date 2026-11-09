@@ -12,6 +12,7 @@ import {
   dateForWeekday,
   formatDate,
   getLessonsForDate,
+  getPublicHolidayOnDate,
   toIsoDate,
   WEEKDAY_LABELS,
   type Weekday,
@@ -44,6 +45,7 @@ export function ScheduleDayPanel({
 }: ScheduleDayPanelProps) {
   const selectedDate = dateForWeekday(now, day);
   const lessons = getLessonsForDate(selectedDate, group.lessons, subgroup);
+  const holiday = getPublicHolidayOnDate(selectedDate);
   const dateIso = toIsoDate(selectedDate);
   const isToday =
     selectedDate.getFullYear() === now.getFullYear() &&
@@ -73,13 +75,17 @@ export function ScheduleDayPanel({
 
         {lessons.length === 0 ? (
           <ThemedView type="backgroundElement" style={styles.empty}>
-            <ThemedText type="smallBold">Пар нет</ThemedText>
+            <ThemedText type="smallBold">
+              {holiday ? 'Государственный праздник' : 'Пар нет'}
+            </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {group.lessons.length === 0
                 ? 'Расписание этой группы пока не добавлено'
-                : todayWeekday === 7 && isToday
-                  ? 'Воскресенье — выходной день'
-                  : 'В этот день занятий нет'}
+                : holiday
+                  ? holiday.localName
+                  : todayWeekday === 7 && isToday
+                    ? 'Воскресенье — выходной день'
+                    : 'В этот день занятий нет'}
             </ThemedText>
           </ThemedView>
         ) : (

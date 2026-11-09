@@ -5,6 +5,7 @@ import { AppIcon } from "@/shared/ui/app-icon";
 import {
   AccentPalettePicker,
   GroupPicker,
+  HolidayRegionPicker,
   NotificationPicker,
   ProfileSection,
   SubgroupPicker,
@@ -19,7 +20,10 @@ import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useTheme } from "@/shared/hooks/use-theme";
 import { formatReminderTime } from "@/features/notifications/lib/notifications-config";
 import { ensureNotificationPermissionsRuntime } from "@/features/notifications/lib/notifications-runtime";
-import type { ThemePreference } from "@/features/profile/lib/profile";
+import {
+  HOLIDAY_REGION_LABELS,
+  type ThemePreference,
+} from "@/features/profile/lib/profile";
 
 const THEME_LABELS: Record<ThemePreference, string> = {
   system: "Системная",
@@ -37,6 +41,7 @@ export default function ProfileScreen() {
     setSubgroup,
     setTheme,
     setAccentPalette,
+    setHolidayRegion,
     setNotifications,
   } = useProfile();
 
@@ -91,6 +96,9 @@ export default function ProfileScreen() {
           </ThemedView>
           <ThemedView style={styles.summaryPills}>
             <SummaryPill label={subgroupLabel} />
+            <SummaryPill
+              label={HOLIDAY_REGION_LABELS[profile.holidayRegion]}
+            />
             <SummaryPill label={THEME_LABELS[profile.theme]} />
             <SummaryPill
               label={ACCENT_PALETTES[profile.accentPalette].label}
@@ -116,6 +124,11 @@ export default function ProfileScreen() {
             hideTitle
             subgroup={profile.subgroup}
             onSelect={setSubgroup}
+          />
+          <HolidayRegionPicker
+            hideTitle
+            region={profile.holidayRegion}
+            onSelect={setHolidayRegion}
           />
         </ProfileSection>
 

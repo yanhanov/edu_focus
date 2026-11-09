@@ -5,6 +5,7 @@ import {
   type WeekParity,
   type Weekday,
 } from '@/features/schedule/data/schedule-11701126';
+import { getPublicHoliday } from '@/features/calendar/lib/public-holidays';
 import { getCachedProfile, type SubgroupPreference } from '@/features/profile/lib/profile';
 import { getEffectiveSchedule } from '@/features/schedule/lib/schedule-overrides';
 
@@ -175,9 +176,14 @@ export function dateForWeekday(today: Date, weekday: Exclude<Weekday, 7>): Date 
   return addDays(today, weekday - todayWeekday);
 }
 
+export function getPublicHolidayOnDate(date: Date) {
+  return getPublicHoliday(toIsoDate(date));
+}
+
 export function describeNowStatus(
   status: NowStatus,
-  weekday: Weekday
+  weekday: Weekday,
+  holidayName?: string,
 ): { title: string; detail: string } {
   if (status.kind === 'now') {
     return {
@@ -203,6 +209,12 @@ export function describeNowStatus(
       detail: 'Сегодня занятий больше нет',
     };
   }
+  if (holidayName) {
+    return {
+      title: 'Государственный праздник',
+      detail: holidayName,
+    };
+  }
   return {
     title: 'Сейчас пар нет',
     detail: weekday === 7 ? 'Воскресенье — выходной' : 'Сегодня занятий нет',
@@ -215,6 +227,9 @@ export function getLessonsForDate(
   subgroup?: SubgroupPreference
 ): Lesson[] {
   const profile = getCachedProfile();
+  if (profile.holidayRegion !== 'none' && getPublicHoliday(toIsoDate(date))) {
+    return [];
+  }
   const source = lessons ?? getGroup(profile.groupId).lessons;
   const selectedSubgroup = subgroup === undefined ? profile.subgroup : subgroup;
   return source

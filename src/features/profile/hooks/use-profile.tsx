@@ -3,10 +3,12 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { AccentPaletteId } from '@/shared/theme/accent-palettes';
 import { getGroup, type Group, type GroupId } from '@/features/schedule/data/groups';
 import { syncHomeworkRemindersRuntime } from '@/features/notifications/lib/notifications-runtime';
+import { syncPublicHolidays, subscribePublicHolidays } from '@/features/calendar/lib/public-holidays';
 import {
   DEFAULT_PROFILE,
   loadProfile,
   saveProfile,
+  type HolidayRegion,
   type NotificationSettings,
   type Profile,
   type SubgroupPreference,
@@ -24,6 +26,7 @@ type ProfileContextValue = {
   setSubgroup: (subgroup: SubgroupPreference) => void;
   setTheme: (theme: ThemePreference) => void;
   setAccentPalette: (accentPalette: AccentPaletteId) => void;
+  setHolidayRegion: (holidayRegion: HolidayRegion) => void;
   setNotifications: (notifications: NotificationSettings) => void;
   completeOnboarding: (next: Profile) => Promise<void>;
 };
@@ -39,19 +42,25 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [scheduleTick, setScheduleTick] = useState(0);
   const [extraTick, setExtraTick] = useState(0);
+  const [holidayTick, setHolidayTick] = useState(0);
 
   useEffect(() => subscribeSchedule(() => setScheduleTick((value) => value + 1)), []);
   useEffect(() => subscribeExtraActivities(() => setExtraTick((value) => value + 1)), []);
+  useEffect(() => subscribePublicHolidays(() => setHolidayTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
     void Promise.all([loadAllScheduleOverrides(), loadExtraActivities()]).then(() =>
       loadProfile().then((next) => {
         if (!cancelled) {
-          setProfile(next);
-          setReady(true);
-          syncScheduleWidget();
-          void syncHomeworkRemindersRuntime(next);
+          void syncPublicHolidays(next.holidayRegion).then(() => {
+            if (!cancelled) {
+              setProfile(next);
+              setReady(true);
+              syncScheduleWidget();
+              void syncHomeworkRemindersRuntime(next);
+            }
+          });
         }
       })
     );
@@ -66,6 +75,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       syncScheduleWidget();
       void syncHomeworkRemindersRuntime(next);
     });
+    void syncPublicHolidays(next.holidayRegion);
   };
 
   const update = (partial: Partial<Profile>) => {
@@ -75,8 +85,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const group = useMemo(() => {
     void scheduleTick;
     void extraTick;
+    void holidayTick;
     return getGroup(profile.groupId);
-  }, [profile.groupId, scheduleTick, extraTick]);
+  }, [profile.groupId, scheduleTick, extraTick, holidayTick]);
 
   return (
     <ProfileContext.Provider
@@ -88,6 +99,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         setSubgroup: (subgroup) => update({ subgroup }),
         setTheme: (theme) => update({ theme }),
         setAccentPalette: (accentPalette) => update({ accentPalette }),
+        setHolidayRegion: (holidayRegion) => update({ holidayRegion }),
         setNotifications: (notifications) => update({ notifications }),
         completeOnboarding: async (next) => {
           const completed = { ...next, onboardingComplete: true };

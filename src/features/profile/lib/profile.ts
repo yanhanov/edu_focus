@@ -11,6 +11,18 @@ import { DEFAULT_GROUP_ID, isGroupId, type GroupId } from '@/features/schedule/d
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type SubgroupPreference = 1 | 2 | null;
 
+/** Страна для гос. праздников (date.nager.at). `none` — не скрывать пары. */
+export type HolidayRegion = 'BY' | 'none';
+
+export const HOLIDAY_REGION_LABELS: Record<HolidayRegion, string> = {
+  BY: 'Беларусь',
+  none: 'Не учитывать',
+};
+
+export function isHolidayRegion(value: string): value is HolidayRegion {
+  return value === 'BY' || value === 'none';
+}
+
 export type NotificationSettings = {
   enabled: boolean;
   hour: number;
@@ -22,6 +34,7 @@ export type Profile = {
   subgroup: SubgroupPreference;
   theme: ThemePreference;
   accentPalette: AccentPaletteId;
+  holidayRegion: HolidayRegion;
   onboardingComplete: boolean;
   notifications: NotificationSettings;
 };
@@ -37,6 +50,7 @@ export const DEFAULT_PROFILE: Profile = {
   subgroup: null,
   theme: 'system',
   accentPalette: DEFAULT_ACCENT_PALETTE,
+  holidayRegion: 'BY',
   onboardingComplete: false,
   notifications: DEFAULT_NOTIFICATIONS,
 };
@@ -100,6 +114,10 @@ function parseProfile(value: unknown, hasStoredProfile: boolean): Profile {
       typeof raw.accentPalette === 'string' && isAccentPaletteId(raw.accentPalette)
         ? raw.accentPalette
         : DEFAULT_ACCENT_PALETTE,
+    holidayRegion:
+      typeof raw.holidayRegion === 'string' && isHolidayRegion(raw.holidayRegion)
+        ? raw.holidayRegion
+        : DEFAULT_PROFILE.holidayRegion,
     onboardingComplete:
       typeof raw.onboardingComplete === 'boolean' ? raw.onboardingComplete : hasStoredProfile,
     notifications: parseNotifications(raw.notifications),
