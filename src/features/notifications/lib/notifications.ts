@@ -6,4 +6,7 @@ export {
   formatReminderTime,
   reminderTimeOptions,
   syncHomeworkReminders,
+  syncLessonLiveNotifications,
+  refreshLessonLiveNotification,
+  syncNotifications,
 } from '@/features/notifications/lib/notifications.web';

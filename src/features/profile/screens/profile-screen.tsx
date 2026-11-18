@@ -136,7 +136,7 @@ export default function ProfileScreen() {
 
         <ProfileSection
           title="Уведомления"
-          subtitle="Напоминание о записанном ДЗ накануне пары"
+          subtitle="ДЗ — вечером перед следующей парой по предмету. Пары — кабинет в шторке"
         >
           <NotificationPicker
             hideTitle

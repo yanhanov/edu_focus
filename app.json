@@ -9,6 +9,7 @@
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "by.edufocus.app",
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#D8EFE4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -17,7 +18,7 @@
       "predictiveBackGestureEnabled": false
     },
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/ios-icon.png",
       "bundleIdentifier": "by.edufocus.app"
     },
     "web": {
@@ -37,7 +38,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/notification-icon.png",
           "color": "#1B6B4A"
         }
       ],

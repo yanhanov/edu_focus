@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 
 import { useProfileOptional } from '@/features/profile/hooks/use-profile';
 import { subscribeHomework } from '@/features/homework/lib/homework';
-import { syncHomeworkRemindersRuntime } from '@/features/notifications/lib/notifications-runtime';
+import {
+  syncHomeworkRemindersRuntime,
+  syncNotificationsRuntime,
+} from '@/features/notifications/lib/notifications-runtime';
 import { getCachedProfile } from '@/features/profile/lib/profile';
 
 export function useHomeworkReminders() {
@@ -22,7 +25,7 @@ export function useHomeworkReminders() {
     if (!ready || !profile) {
       return;
     }
-    void syncHomeworkRemindersRuntime(profile);
+    void syncNotificationsRuntime(profile);
   }, [ready, profile]);
 }
 

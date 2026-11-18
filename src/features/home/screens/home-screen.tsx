@@ -130,10 +130,8 @@ export default function HomeScreen() {
               {statusCopy.title}
             </ThemedText>
             <ThemedText style={styles.heroDetail}>{statusCopy.detail}</ThemedText>
-            {currentLesson ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                {formatPlace(currentLesson)}
-              </ThemedText>
+            {currentLesson && formatPlace(currentLesson) ? (
+              <ThemedText type="smallBold">{formatPlace(currentLesson)}</ThemedText>
             ) : null}
             <ThemedView style={[styles.heroAction, { backgroundColor: theme.background }]}>
               <AppIcon
@@ -168,14 +166,13 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
           ) : (
-            todaySubjectGroups.map((group, index) => (
+            todaySubjectGroups.map((group) => (
               <LessonTimelineRow
                 key={group.key}
                 lessons={group.lessons}
                 date={todayIso}
                 status={nowStatus}
                 nowMinutes={nowMinutes}
-                prevGroup={index > 0 ? todaySubjectGroups[index - 1] : undefined}
                 homeworkMap={homeworkMap}
               />
             ))
@@ -279,14 +276,12 @@ function LessonTimelineRow({
   date,
   status,
   nowMinutes,
-  prevGroup,
   homeworkMap,
 }: {
   lessons: Lesson[];
   date: string;
   status: NowStatus;
   nowMinutes: number;
-  prevGroup?: { lessons: Lesson[] };
   homeworkMap: HomeworkMap;
 }) {
   const theme = useTheme();
@@ -300,9 +295,6 @@ function LessonTimelineRow({
   const entry = pickHomeworkEntryForLessons(date, lessons, homeworkMap);
   const hwStatus = groupHomeworkStatus(date, lessons, homeworkMap);
   const summary = homeworkSummary(entry);
-  const prevStatus = prevGroup
-    ? groupHomeworkStatus(date, prevGroup.lessons, homeworkMap)
-    : 'none';
   const openLessonId = entry?.lessonId ?? lesson.id;
   const { start: timeStart, end: timeEnd } = homeworkRowTimeColumn(lessons);
   const slotTimes = lessons.length > 1 ? formatLessonTimes(lessons) : null;
@@ -353,9 +345,6 @@ function LessonTimelineRow({
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {slotTimes}
             </ThemedText>
-          ) : null}
-          {prevStatus !== 'none' ? (
-            <HomeworkStatusChip status={prevStatus} compact prefix="К след. паре" />
           ) : null}
           {summary.text ? (
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>

@@ -26,14 +26,16 @@ function resolveNowState(today: WidgetLesson[]) {
     return {
       badge: 'Сейчас',
       title: current.title,
-      meta: `${current.start}–${current.end}`,
+      meta: current.place
+        ? `${current.start}–${current.end} · ${current.place}`
+        : `${current.start}–${current.end}`,
     };
   }
   if (next) {
     return {
       badge: 'Дальше',
       title: next.title,
-      meta: next.start,
+      meta: next.place ? `${next.start} · ${next.place}` : next.start,
     };
   }
   return {

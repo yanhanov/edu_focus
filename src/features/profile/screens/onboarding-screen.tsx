@@ -36,7 +36,7 @@ const STEP_META: Record<Step, { title: string; subtitle: string }> = {
   },
   notifications: {
     title: "Напоминания",
-    subtitle: "Вечером накануне пары, если ДЗ записано и ещё не сделано",
+    subtitle: "ДЗ — вечером перед следующей парой по предмету. Во время пар в шторке остаётся кабинет",
   },
 };
 

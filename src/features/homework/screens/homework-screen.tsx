@@ -17,12 +17,8 @@ import { HomeworkWeekSearchSection } from '@/features/homework/components/homewo
 import { useNow } from '@/shared/hooks/use-now';
 import { useProfile } from '@/features/profile/hooks/use-profile';
 import { useTheme } from '@/shared/hooks/use-theme';
-import {
-  dedupeHomeworkEntriesBySubject,
-  groupLessonsBySubject,
-  subjectMatchesQuery,
-} from '@/features/homework/lib/homework-subject';
-import { listHomeworkEntries, type HomeworkEntry } from '@/features/homework/lib/homework';
+import { groupHomeworkBySubject } from '@/features/homework/lib/homework-subject';
+import { listHomeworkEntries } from '@/features/homework/lib/homework';
 import {
   getMatchingLessonsForWeek,
   isIsoInStudyWeek,
@@ -63,42 +59,48 @@ export default function HomeworkListScreen() {
   const todayIso = toIsoDate(now);
   const weekSearchActive = search.query.trim().length > 0;
   const todayLessons = getLessonsForDate(now, group.lessons, profile.subgroup);
-  const todayGroups = useMemo(
-    () => groupLessonsBySubject(todayLessons),
-    [todayLessons],
-  );
   const weekSearchHitCount = useMemo(() => {
     if (!weekSearchActive) {
       return 0;
     }
     return getMatchingLessonsForWeek(now, group.lessons, profile.subgroup, search.query).length;
   }, [weekSearchActive, now, group.lessons, profile.subgroup, search.query]);
-  const saved = listHomeworkEntries(homeworkMap).filter((item) =>
-    Boolean(getLessonById(item.lessonId, group.lessons)),
+  const saved = useMemo(
+    () =>
+      listHomeworkEntries(homeworkMap).filter((item) =>
+        Boolean(getLessonById(item.lessonId, group.lessons)),
+      ),
+    [homeworkMap, group.lessons],
   );
-  const earlier = saved.filter((item) => {
-    if (item.date === todayIso) {
-      return false;
-    }
-    if (weekSearchActive && isIsoInStudyWeek(item.date, now)) {
-      return false;
-    }
-    return true;
-  });
-  const earlierGroups = useMemo(() => {
-    const byDate = groupByDate(earlier);
-    return byDate
-      .map((bucket) => ({
-        date: bucket.date,
-        rows: dedupeHomeworkEntriesBySubject(bucket.items, (lessonId) =>
-          getLessonById(lessonId, group.lessons),
-        ).filter((row) => !weekSearchActive || subjectMatchesQuery(row.lessons[0]!, search.query)),
-      }))
-      .filter((bucket) => bucket.rows.length > 0);
-  }, [earlier, group.lessons, search.query, weekSearchActive]);
+  const savedForList = useMemo(
+    () => (weekSearchActive ? saved.filter((item) => !isIsoInStudyWeek(item.date, now)) : saved),
+    [weekSearchActive, saved, now],
+  );
+
+  const subjectGroups = useMemo(
+    () =>
+      groupHomeworkBySubject({
+        todayIso,
+        todayLessons,
+        saved: savedForList,
+        homeworkMap,
+        resolveLesson: (lessonId) => getLessonById(lessonId, group.lessons),
+        query: search.query,
+        includeTodaySlots: !weekSearchActive,
+      }),
+    [
+      todayIso,
+      todayLessons,
+      savedForList,
+      homeworkMap,
+      group.lessons,
+      search.query,
+      weekSearchActive,
+    ],
+  );
 
   const showEmptySearch =
-    weekSearchActive && weekSearchHitCount === 0 && earlierGroups.length === 0;
+    weekSearchActive && weekSearchHitCount === 0 && subjectGroups.length === 0;
 
   return (
     <ThemedView style={styles.screen}>
@@ -142,37 +144,44 @@ export default function HomeworkListScreen() {
             subgroup={profile.subgroup}
             homeworkMap={homeworkMap}
           />
-        ) : todayGroups.length > 0 ? (
-          <ThemedView style={styles.block}>
-            <ThemedText type="smallBold">Сегодняшние пары</ThemedText>
-            {todayGroups.map((item) => (
-              <HomeworkRow
-                key={item.key}
-                lessons={item.lessons}
-                date={todayIso}
-                homeworkMap={homeworkMap}
-                emptyLabel="Добавить"
-              />
-            ))}
-          </ThemedView>
         ) : null}
 
-        {earlierGroups.length > 0 ? (
+        {subjectGroups.length > 0 ? (
           <ThemedView style={styles.block}>
             {weekSearchActive ? (
               <ThemedText type="smallBold">Сохранённые задания</ThemedText>
-            ) : null}
-            {earlierGroups.map((groupItems) => (
-              <ThemedView key={groupItems.date} style={styles.dateBucket}>
-                <ThemedText type="smallBold">{dateHeading(groupItems.date, todayIso)}</ThemedText>
-                {groupItems.rows.map((row) => (
-                  <HomeworkRow
-                    key={row.key}
-                    lessons={row.lessons}
-                    date={row.date}
-                    homeworkMap={homeworkMap}
-                    entry={row.entry}
-                  />
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                По предметам
+              </ThemedText>
+            )}
+            {subjectGroups.map((subjectGroup) => (
+              <ThemedView key={subjectGroup.key} type="backgroundElement" style={styles.subjectCard}>
+                <ThemedView style={styles.subjectHeader}>
+                  <ThemedText type="smallBold" style={styles.subjectTitle}>
+                    {subjectGroup.subject}
+                  </ThemedText>
+                  {subjectGroup.teacher ? (
+                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      {subjectGroup.teacher}
+                    </ThemedText>
+                  ) : null}
+                </ThemedView>
+                {subjectGroup.dateBuckets.map((bucket) => (
+                  <ThemedView key={bucket.date} style={styles.dateBucket}>
+                    <ThemedText type="smallBold">{dateHeading(bucket.date, todayIso)}</ThemedText>
+                    {bucket.rows.map((row) => (
+                      <HomeworkRow
+                        key={row.key}
+                        lessons={row.lessons}
+                        date={bucket.date}
+                        homeworkMap={homeworkMap}
+                        entry={row.entry}
+                        emptyLabel="Добавить"
+                        nested
+                      />
+                    ))}
+                  </ThemedView>
                 ))}
               </ThemedView>
             ))}
@@ -188,10 +197,7 @@ export default function HomeworkListScreen() {
           </ThemedView>
         ) : null}
 
-        {!showEmptySearch &&
-        !weekSearchActive &&
-        todayGroups.length === 0 &&
-        earlierGroups.length === 0 ? (
+        {!showEmptySearch && !weekSearchActive && subjectGroups.length === 0 ? (
           <ThemedView type="backgroundElement" style={styles.empty}>
             <ThemedView style={[styles.emptyIcon, { backgroundColor: theme.accentSoft }]}>
               <AppIcon ios="note.text" android="edit_note" color={theme.accent} size={28} />
@@ -205,19 +211,6 @@ export default function HomeworkListScreen() {
       </ScrollView>
     </ThemedView>
   );
-}
-
-function groupByDate(items: HomeworkEntry[]): { date: string; items: HomeworkEntry[] }[] {
-  const groups: { date: string; items: HomeworkEntry[] }[] = [];
-  items.forEach((item) => {
-    const last = groups[groups.length - 1];
-    if (last && last.date === item.date) {
-      last.items.push(item);
-      return;
-    }
-    groups.push({ date: item.date, items: [item] });
-  });
-  return groups;
 }
 
 const styles = StyleSheet.create({
@@ -247,8 +240,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   block: {
-    gap: Spacing.two,
+    gap: Spacing.three,
     backgroundColor: 'transparent',
+  },
+  subjectCard: {
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.three,
+  },
+  subjectHeader: {
+    gap: 2,
+    backgroundColor: 'transparent',
+  },
+  subjectTitle: {
+    fontSize: 16,
+    lineHeight: 22,
   },
   dateBucket: {
     gap: Spacing.two,

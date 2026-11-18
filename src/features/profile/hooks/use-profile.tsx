@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 import type { AccentPaletteId } from '@/shared/theme/accent-palettes';
 import { getGroup, type Group, type GroupId } from '@/features/schedule/data/groups';
-import { syncHomeworkRemindersRuntime } from '@/features/notifications/lib/notifications-runtime';
+import { syncNotificationsRuntime } from '@/features/notifications/lib/notifications-runtime';
 import { syncPublicHolidays, subscribePublicHolidays } from '@/features/calendar/lib/public-holidays';
 import {
   DEFAULT_PROFILE,
+  getCachedProfile,
   loadProfile,
   saveProfile,
   type HolidayRegion,
@@ -44,8 +45,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [extraTick, setExtraTick] = useState(0);
   const [holidayTick, setHolidayTick] = useState(0);
 
-  useEffect(() => subscribeSchedule(() => setScheduleTick((value) => value + 1)), []);
-  useEffect(() => subscribeExtraActivities(() => setExtraTick((value) => value + 1)), []);
+  useEffect(
+    () =>
+      subscribeSchedule(() => {
+        setScheduleTick((value) => value + 1);
+        void syncNotificationsRuntime(getCachedProfile());
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      subscribeExtraActivities(() => {
+        setExtraTick((value) => value + 1);
+        void syncNotificationsRuntime(getCachedProfile());
+      }),
+    [],
+  );
   useEffect(() => subscribePublicHolidays(() => setHolidayTick((value) => value + 1)), []);
 
   useEffect(() => {
@@ -58,7 +73,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
               setProfile(next);
               setReady(true);
               syncScheduleWidget();
-              void syncHomeworkRemindersRuntime(next);
+              void syncNotificationsRuntime(next);
             }
           });
         }
@@ -73,7 +88,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setProfile(next);
     void saveProfile(next).then(() => {
       syncScheduleWidget();
-      void syncHomeworkRemindersRuntime(next);
+      void syncNotificationsRuntime(next);
     });
     void syncPublicHolidays(next.holidayRegion);
   };

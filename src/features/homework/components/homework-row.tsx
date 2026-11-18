@@ -30,6 +30,8 @@ export type HomeworkRowProps = {
   homeworkMap: Record<string, HomeworkEntry>;
   entry?: HomeworkEntry;
   emptyLabel?: string;
+  /** Внутри секции предмета не дублируем название и преподавателя. */
+  nested?: boolean;
 };
 
 function openLesson(lessonId: string, date: string) {
@@ -45,6 +47,7 @@ export function HomeworkRow({
   homeworkMap,
   entry: entryOverride,
   emptyLabel,
+  nested = false,
 }: HomeworkRowProps) {
   const theme = useTheme();
   const primary = lessons[0]!;
@@ -72,7 +75,9 @@ export function HomeworkRow({
     <Pressable
       onPress={() => openLesson(openTargetId, date)}
       style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
+      <ThemedView
+        type={nested ? 'backgroundSelected' : 'backgroundElement'}
+        style={styles.card}>
         <ThemedView style={styles.timeCol}>
           <ThemedText type="smallBold">{timeStart}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
@@ -82,11 +87,23 @@ export function HomeworkRow({
 
         <ThemedView style={styles.body}>
           <ThemedView style={styles.subjectRow}>
-            <ThemedText type="smallBold" style={styles.subjectTitle} numberOfLines={2}>
-              {primary.subject}
-            </ThemedText>
+            {nested ? (
+              <ThemedView style={styles.nestedTitle}>
+                {lessonTypes.length === 1 ? (
+                  <LessonTypeBadge type={lessonTypes[0]!} />
+                ) : (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {lessons.length} пары
+                  </ThemedText>
+                )}
+              </ThemedView>
+            ) : (
+              <ThemedText type="smallBold" style={styles.subjectTitle} numberOfLines={2}>
+                {primary.subject}
+              </ThemedText>
+            )}
             <ThemedView style={styles.subjectMeta}>
-              {lessonTypes.length === 1 ? (
+              {nested ? null : lessonTypes.length === 1 ? (
                 <LessonTypeBadge type={lessonTypes[0]!} />
               ) : (
                 <ThemedText type="small" themeColor="textSecondary">
@@ -102,11 +119,11 @@ export function HomeworkRow({
               ) : null}
             </ThemedView>
           </ThemedView>
-          {primary.teacher ? (
+          {nested || !primary.teacher ? null : (
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
               {primary.teacher}
             </ThemedText>
-          ) : null}
+          )}
           {slotTimes ? (
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {slotTimes}
@@ -178,6 +195,12 @@ const styles = StyleSheet.create({
   subjectTitle: {
     flex: 1,
     flexShrink: 1,
+  },
+  nestedTitle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   subjectMeta: {
     flexDirection: 'row',

@@ -42,6 +42,36 @@ export async function syncHomeworkRemindersRuntime(profile?: Profile) {
     const notifications = await loadNotificationsModule();
     await notifications.syncHomeworkReminders(profile);
   } catch (error) {
+    console.warn('[notifications] homework sync skipped:', error);
+  }
+}
+
+export async function refreshLessonLiveNotificationRuntime(profile?: Profile, now?: Date) {
+  if (Platform.OS === 'web') {
+    return;
+  }
+  try {
+    const notifications = await loadNotificationsModule();
+    if (typeof notifications.refreshLessonLiveNotification === 'function') {
+      await notifications.refreshLessonLiveNotification(profile, now);
+    }
+  } catch (error) {
+    console.warn('[notifications] refresh skipped:', error);
+  }
+}
+
+export async function syncNotificationsRuntime(profile?: Profile) {
+  if (Platform.OS === 'web') {
+    return;
+  }
+  try {
+    const notifications = await loadNotificationsModule();
+    if (typeof notifications.syncNotifications === 'function') {
+      await notifications.syncNotifications(profile);
+      return;
+    }
+    await notifications.syncHomeworkReminders(profile);
+  } catch (error) {
     console.warn('[notifications] sync skipped:', error);
   }
 }

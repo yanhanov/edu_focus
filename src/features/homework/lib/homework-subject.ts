@@ -1,4 +1,10 @@
 import type { Lesson } from '@/features/schedule/data/schedule-11701126';
+import type { SubgroupPreference } from '@/features/profile/lib/profile';
+import {
+  addDays,
+  getLessonsForDate,
+  toIsoDate,
+} from '@/features/schedule/lib/schedule';
 
 import {
   homeworkCompletionStatus,
@@ -129,34 +135,210 @@ export function groupHomeworkTodoCount(
   ).length;
 }
 
-export function dedupeHomeworkEntriesBySubject(
-  items: HomeworkEntry[],
-  resolveLesson: (lessonId: string) => Lesson | undefined,
-): { lessons: Lesson[]; entry?: HomeworkEntry; date: string; key: string }[] {
-  const map = new Map<string, { lessons: Lesson[]; entries: HomeworkEntry[]; date: string }>();
+function parseIsoDate(iso: string): Date {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
-  for (const item of items) {
+export type NextSubjectLesson = {
+  iso: string;
+  date: Date;
+  lesson: Lesson;
+};
+
+/** Следующая пара этого предмета — не раньше следующего дня после записи. */
+export function findNextSubjectLesson(
+  afterIso: string,
+  lesson: Pick<Lesson, 'subject' | 'teacher'>,
+  allLessons: readonly Lesson[],
+  subgroup: SubgroupPreference,
+  maxDays = 56,
+): NextSubjectLesson | undefined {
+  const key = lessonSubjectKey(lesson);
+  const afterDate = parseIsoDate(afterIso);
+  for (let offset = 1; offset <= maxDays; offset++) {
+    const date = addDays(afterDate, offset);
+    const match = getLessonsForDate(date, allLessons, subgroup).find(
+      (item) => lessonSubjectKey(item) === key,
+    );
+    if (match) {
+      return { iso: toIsoDate(date), date, lesson: match };
+    }
+  }
+  return undefined;
+}
+
+export type HomeworkSubjectDateBucket = {
+  date: string;
+  rows: {
+    key: string;
+    lessons: Lesson[];
+    entry?: HomeworkEntry;
+  }[];
+};
+
+export type HomeworkSubjectGroup = {
+  key: string;
+  subject: string;
+  teacher: string;
+  todayStart: string | null;
+  dateBuckets: HomeworkSubjectDateBucket[];
+};
+
+type SubjectAccumulator = {
+  key: string;
+  subject: string;
+  teacher: string;
+  todayStart: string | null;
+  dates: Map<string, { lessons: Lesson[]; entries: HomeworkEntry[] }>;
+};
+
+function ensureSubject(
+  acc: Map<string, SubjectAccumulator>,
+  lesson: Lesson,
+  todayStart: string | null,
+): SubjectAccumulator {
+  const key = lessonSubjectKey(lesson);
+  const existing = acc.get(key);
+  if (existing) {
+    if (!existing.todayStart && todayStart) {
+      existing.todayStart = todayStart;
+    }
+    return existing;
+  }
+  const created: SubjectAccumulator = {
+    key,
+    subject: lesson.subject,
+    teacher: lesson.teacher,
+    todayStart,
+    dates: new Map(),
+  };
+  acc.set(key, created);
+  return created;
+}
+
+function ensureDate(
+  subject: SubjectAccumulator,
+  date: string,
+): { lessons: Lesson[]; entries: HomeworkEntry[] } {
+  const existing = subject.dates.get(date);
+  if (existing) {
+    return existing;
+  }
+  const created = { lessons: [] as Lesson[], entries: [] as HomeworkEntry[] };
+  subject.dates.set(date, created);
+  return created;
+}
+
+function uniqueLessons(lessons: Lesson[]): Lesson[] {
+  const seen = new Set<string>();
+  const result: Lesson[] = [];
+  for (const lesson of lessons) {
+    if (seen.has(lesson.id)) {
+      continue;
+    }
+    seen.add(lesson.id);
+    result.push(lesson);
+  }
+  return result.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+export function groupHomeworkBySubject(options: {
+  todayIso: string;
+  todayLessons: Lesson[];
+  saved: HomeworkEntry[];
+  homeworkMap: HomeworkMap;
+  resolveLesson: (lessonId: string) => Lesson | undefined;
+  query?: string;
+  includeTodaySlots?: boolean;
+}): HomeworkSubjectGroup[] {
+  const {
+    todayIso,
+    todayLessons,
+    saved,
+    homeworkMap,
+    resolveLesson,
+    query = '',
+    includeTodaySlots = true,
+  } = options;
+  const acc = new Map<string, SubjectAccumulator>();
+
+  if (includeTodaySlots) {
+    for (const group of groupLessonsBySubject(todayLessons)) {
+      const subject = ensureSubject(acc, group.primaryLesson, group.primaryLesson.start);
+      const day = ensureDate(subject, todayIso);
+      day.lessons.push(...group.lessons);
+      const entry = pickHomeworkEntryForLessons(todayIso, group.lessons, homeworkMap);
+      if (entry) {
+        day.entries.push(entry);
+      }
+    }
+  }
+
+  for (const item of saved) {
     const lesson = resolveLesson(item.lessonId);
     if (!lesson) {
       continue;
     }
-    const key = `${item.date}:${lessonSubjectKey(lesson)}`;
-    const bucket = map.get(key) ?? { lessons: [], entries: [], date: item.date };
-    bucket.lessons.push(lesson);
-    bucket.entries.push(item);
-    map.set(key, bucket);
+    const subject = ensureSubject(acc, lesson, null);
+    const day = ensureDate(subject, item.date);
+    day.lessons.push(lesson);
+    day.entries.push(item);
   }
 
-  return [...map.entries()]
-    .map(([key, bucket]) => {
-      const lessons = [...bucket.lessons].sort((a, b) => a.start.localeCompare(b.start));
-      const entry = [...bucket.entries].sort((a, b) => b.updatedAt - a.updatedAt)[0];
-      return { key, lessons, entry, date: bucket.date };
+  return [...acc.values()]
+    .map((subject) => {
+      const dateBuckets = [...subject.dates.entries()]
+        .map(([date, bucket]) => {
+          const lessons = uniqueLessons(bucket.lessons);
+          const entry = [...bucket.entries].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+          return {
+            date,
+            rows: [
+              {
+                key: `${date}:${subject.key}`,
+                lessons,
+                entry,
+              },
+            ],
+          };
+        })
+        .filter((bucket) => bucket.rows[0]?.lessons.length)
+        .sort((a, b) => {
+          if (a.date === todayIso) {
+            return -1;
+          }
+          if (b.date === todayIso) {
+            return 1;
+          }
+          return b.date.localeCompare(a.date);
+        });
+
+      return {
+        key: subject.key,
+        subject: subject.subject,
+        teacher: subject.teacher,
+        todayStart: subject.todayStart,
+        dateBuckets,
+      };
+    })
+    .filter((group) => {
+      if (group.dateBuckets.length === 0) {
+        return false;
+      }
+      const sample = group.dateBuckets[0]?.rows[0]?.lessons[0];
+      return !sample || subjectMatchesQuery(sample, query);
     })
     .sort((a, b) => {
-      if (a.date !== b.date) {
-        return b.date.localeCompare(a.date);
+      if (a.todayStart && b.todayStart) {
+        return a.todayStart.localeCompare(b.todayStart);
       }
-      return a.lessons[0]!.start.localeCompare(b.lessons[0]!.start);
+      if (a.todayStart) {
+        return -1;
+      }
+      if (b.todayStart) {
+        return 1;
+      }
+      return a.subject.localeCompare(b.subject, 'ru');
     });
 }

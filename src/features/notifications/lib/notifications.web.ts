@@ -13,3 +13,9 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
 }
 
 export async function syncHomeworkReminders(_profile?: Profile) {}
+
+export async function syncLessonLiveNotifications(_profile?: Profile) {}
+
+export async function refreshLessonLiveNotification(_profile?: Profile, _now?: Date) {}
+
+export async function syncNotifications(_profile?: Profile) {}

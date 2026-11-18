@@ -6,7 +6,6 @@ import { useColorScheme } from '@/shared/hooks/use-color-scheme';
 import { AnimatedSplashOverlay } from '@/shared/ui/animated-icon';
 import { useHomeworkReminders } from '@/features/homework/hooks/use-homework-reminders';
 import { ProfileProvider } from '@/features/profile/hooks/use-profile';
-import '@/widgets/ScheduleWidget';
 
 SplashScreen.preventAutoHideAsync();
 

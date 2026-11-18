@@ -470,7 +470,7 @@ export function NotificationPicker({
                   : "Напоминания выключены"}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Вечером накануне пары, если ДЗ записано
+                ДЗ — вечером перед следующей парой по предмету. Во время пар в шторке остаётся кабинет
               </ThemedText>
             </ThemedView>
           </ThemedView>
